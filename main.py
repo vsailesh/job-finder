@@ -266,6 +266,12 @@ async def run_once(sources: List[str] = None):
     sources_searched = ",".join(r["name"] for r in results if not r["error"])
     await db.complete_run(run_id, total_found, total_new, total_dupes, total_errors, sources_searched)
     
+    import os
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        console.print(f"\n  🧹 [bold yellow]GitHub Actions detected[/bold yellow] - cleaning jobs older than 7 days...")
+        deleted_count = await db.clean_old_jobs(days=7)
+        console.print(f"  🗑️  Removed [red]{deleted_count}[/red] old jobs to keep cloud DB lightweight")
+    
     console.print(
         f"\n  💾 Database: [bold]{config.DB_PATH}[/bold]"
     )

@@ -132,6 +132,18 @@ class JobDatabase:
         logger.info(f"Inserted {inserted} new jobs, skipped {skipped} duplicates")
         return {"inserted": inserted, "skipped": skipped}
     
+    async def clean_old_jobs(self, days: int = 7) -> int:
+        """Remove jobs posted more than `days` ago."""
+        async with aiosqlite.connect(self.db_path) as db:
+            query = f"DELETE FROM jobs WHERE datetime(posted_date) <= datetime('now', '-{days} days')"
+            cursor = await db.execute(query)
+            await db.commit()
+            
+            deleted = cursor.rowcount
+            if deleted > 0:
+                logger.info(f"Cleaned up {deleted} jobs older than {days} days")
+            return deleted
+    
     async def get_jobs(
         self,
         source: Optional[str] = None,
