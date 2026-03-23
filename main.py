@@ -42,6 +42,7 @@ from agents.glassdoor_agent import GlassdoorAgent
 from agents.monster_agent import MonsterAgent
 from agents.remoteok_agent import RemoteOKAgent
 from agents.careers_agent import CareersAgent
+from agents.dice_agent import DiceAgent
 
 console = Console()
 
@@ -71,6 +72,7 @@ AGENT_MAP = {
     "monster": MonsterAgent,
     "remoteok": RemoteOKAgent,
     "careers": CareersAgent,
+    "dice": DiceAgent,
 }
 
 
@@ -118,6 +120,8 @@ def print_config_status():
          "RemoteOK remote jobs (no key needed)"),
         ("Careers", True,
          "Company career pages — Greenhouse, Lever, Ashby (no key needed)"),
+        ("Dice", True,
+         "Dice tech jobs scraper (no key needed)"),
     ]
     
     for name, configured, coverage in agents_info:
