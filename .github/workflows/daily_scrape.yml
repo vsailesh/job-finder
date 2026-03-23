@@ -1,0 +1,56 @@
+name: Daily Job Scrape
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Runs at 04:00 UTC every day
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+jobs:
+  scrape-jobs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to commit and push changes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Match your Python version
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium # Required for playwright scrapers if any
+
+      - name: Run job scraper
+        run: |
+          python main.py
+        env:
+          # If your code needs these API keys, you must set them in GitHub Secrets!
+          USAJOBS_API_KEY: ${{ secrets.USAJOBS_API_KEY }}
+          USAJOBS_EMAIL: ${{ secrets.USAJOBS_EMAIL }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+
+      - name: Commit and push updated database
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Force add the database in case it's in .gitignore
+          git add -f data/jobs.db data/tracked_companies.json
+          
+          # Only commit if there are changes
+          if ! git diff --staged --quiet; then
+            git commit -m "Automated daily scrape data update"
+            git push
+          else
+            echo "No new jobs found. Database unchanged."
+          fi
