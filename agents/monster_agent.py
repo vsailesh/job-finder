@@ -27,40 +27,37 @@ class MonsterAgent(BaseAgent):
         return True
 
     async def _get_page_html(self, keyword: str) -> str:
-        """Launch headless Chrome and fetch Monster search results."""
-        try:
-            from playwright.async_api import async_playwright
-        except ImportError:
-            logger.error("[monster] playwright not installed")
+        """Fetch Monster search results via ScraperAPI."""
+        import aiohttp
+        import urllib.parse
+        
+        if not config.SCRAPERAPI_KEY:
+            logger.error("[monster] SCRAPERAPI_KEY is not set. Monster requires ScraperAPI to bypass DataDome.")
             return ""
 
+        target_url = f"{MONSTER_URL}?q={keyword}&where=United+States&page=1&recency=last+24+hours"
+        encoded_url = urllib.parse.quote(target_url)
+        
+        # ScraperAPI requires render=true to execute Monster's React app
+        api_url = f"http://api.scraperapi.com?api_key={config.SCRAPERAPI_KEY}&url={encoded_url}&render=true"
+        
+        logger.debug(f"[monster] Fetching via ScraperAPI: {target_url}")
+        
         try:
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
-                context = await browser.new_context(
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-                    viewport={"width": 1920, "height": 1080},
-                    locale="en-US",
-                )
-                page = await context.new_page()
-
-                url = f"{MONSTER_URL}?q={keyword}&where=United+States&page=1&recency=last+24+hours"
-                await page.goto(url, wait_until="networkidle", timeout=30000)
-
-                # Wait for job cards
-                try:
-                    await page.wait_for_selector('[data-testid="jobTitle"]', timeout=8000)
-                except Exception:
-                    try:
-                        await page.wait_for_selector('.job-search-resultsstyle', timeout=5000)
-                    except Exception:
-                        await asyncio.sleep(3)
-
-                html = await page.content()
-                await browser.close()
-                return html
+            async with aiohttp.ClientSession() as session:
+                # ScraperAPI can take up to 60 seconds to solve Captchas and render the page
+                async with session.get(api_url, timeout=90) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        if "captcha-delivery" in html or "DataDome" in html:
+                            logger.error("[monster] ScraperAPI failed to bypass DataDome CAPTCHA.")
+                            return ""
+                        return html
+                    else:
+                        logger.error(f"[monster] ScraperAPI returned status {response.status}")
+                        return ""
         except Exception as e:
-            logger.error(f"[monster] Playwright error for '{keyword}': {e}")
+            logger.error(f"[monster] ScraperAPI error for '{keyword}': {e}")
             return ""
 
     async def search(self, keyword: str, category: str) -> List[Job]:

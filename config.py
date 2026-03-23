@@ -16,6 +16,7 @@ USAJOBS_EMAIL = os.getenv("USAJOBS_EMAIL", "")
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
+SCRAPERAPI_KEY = os.getenv("SCRAPERAPI_KEY", "")
 
 # ─── Database ───────────────────────────────────────────────
 DB_PATH = PROJECT_ROOT / "data" / "jobs.db"
