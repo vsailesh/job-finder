@@ -4,9 +4,6 @@ on:
   schedule:
     - cron: '0 13 * * *' # Runs at 13:00 UTC every day (approx. 8 AM EST)
   workflow_dispatch: # Allows manual trigger from GitHub Actions UI
-  push:
-    branches:
-      - main
 
 jobs:
   scrape-jobs:
