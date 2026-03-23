@@ -52,6 +52,8 @@ class DiceAgent(BaseAgent):
                     await asyncio.sleep(5)
                     
                 html = await page.content()
+                with open("/tmp/dice.html", "w") as f:
+                    f.write(html)
                 await browser.close()
                 return html
         except Exception as e:
@@ -65,35 +67,34 @@ class DiceAgent(BaseAgent):
         if not html:
             return jobs
 
-        # Dice often changes its HTML structure, but typically uses `card-title-link` for the main job link.
-        titles_and_urls = re.findall(r'<a[^>]*class="card-title-link"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', html, re.IGNORECASE | re.DOTALL)
-        if not titles_and_urls:
-            titles_and_urls = re.findall(r'<a[^>]*data-cy="card-title-link"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', html, re.IGNORECASE | re.DOTALL)
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, "html.parser")
+            job_cards = soup.find_all("div", {"data-testid": "job-card"})
             
-        companies = re.findall(r'<a[^>]*data-cy="search-result-company-name"[^>]*>(.*?)</a>', html, re.IGNORECASE | re.DOTALL)
-        locations = re.findall(r'<span[^>]*data-cy="search-result-location"[^>]*>(.*?)</span>', html, re.IGNORECASE | re.DOTALL)
-        
-        for i, (url, title_html) in enumerate(titles_and_urls):
-            # Clean up title (remove inner HTML like spans/bold tags)
-            title = re.sub(r'<[^>]+>', '', title_html).strip()
-            
-            # Format URL
-            if url.startswith('/'):
-                url = f"https://www.dice.com{url}"
-            else:
-                # Dice sometimes uses relative or tracked URLs
-                url = url.split("?")[0] if "?" in url and "jobId" not in url else url
+            for card in job_cards:
+                title_el = card.find("a", {"data-testid": "job-search-job-detail-link"})
+                if not title_el:
+                    continue
+                    
+                title = title_el.get_text(strip=True)
+                url = title_el.get("href", "")
                 
-            # Attempt to align company and location arrays with title arrays
-            company = "Unknown"
-            if i < len(companies):
-                company = re.sub(r'<[^>]+>', '', companies[i]).strip()
-                
-            loc = "United States"
-            if i < len(locations):
-                loc = re.sub(r'<[^>]+>', '', locations[i]).strip()
+                company = "Unknown"
+                company_el = card.select_one('a[href*="/company-profile/"]')
+                if company_el:
+                    company = company_el.get_text(strip=True)
 
-            if title:
+                loc = "United States"
+                p_tags = card.find_all("p", class_=lambda c: c and "text-zinc-600" in c)
+                if p_tags:
+                    loc = p_tags[0].get_text(strip=True)
+
+                if url.startswith('/'):
+                    url = f"https://www.dice.com{url}"
+                else:
+                    url = url.split("?")[0] if "?" in url and "jobId" not in url else url
+
                 is_remote = "remote" in loc.lower() or "remote" in title.lower()
                 
                 job = Job(
@@ -109,6 +110,8 @@ class DiceAgent(BaseAgent):
                     search_keyword=keyword,
                 )
                 jobs.append(job)
+        except Exception as e:
+            logger.error(f"[dice] Error parsing HTML: {e}")
 
         unique_jobs = list({j.url: j for j in jobs}.values())
         
