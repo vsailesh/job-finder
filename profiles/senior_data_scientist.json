@@ -1,0 +1,33 @@
+{
+  "name": "Senior Data Scientist",
+  "full_name": "Sailesh Venigalla",
+  "email": "saileshvenig@gmail.com",
+  "phone": "2026566020",
+  "resume_path": "",
+  "cover_letter_template": "",
+  "skills": [
+    "Python",
+    "Machine Learning",
+    "SQL",
+    "TensorFlow",
+    "AWS"
+  ],
+  "preferred_categories": [
+    "Healthcare",
+    "Science & Technology"
+  ],
+  "preferred_job_types": [
+    "remote"
+  ],
+  "target_salary_min": 120000.0,
+  "target_salary_max": 200000.0,
+  "years_experience": 8,
+  "security_clearance": "none",
+  "education": "MS Data Science",
+  "linkedin_url": "",
+  "portfolio_url": "",
+  "location_preference": "Remote",
+  "willing_to_relocate": false,
+  "created_at": "2026-03-22T01:34:30.019992",
+  "updated_at": "2026-03-22T01:34:30.020167"
+}
