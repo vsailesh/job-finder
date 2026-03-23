@@ -44,8 +44,9 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Force add the database in case it's in .gitignore
-          git add -f data/jobs.db data/tracked_companies.json
+          # Force add the database in case it's in .gitignore (using || true so it doesn't fail if missing)
+          git add -f data/jobs.db || true
+          git add -f data/tracked_companies.json || true
           
           # Only commit if there are changes
           if ! git diff --staged --quiet; then
