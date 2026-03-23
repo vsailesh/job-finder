@@ -1,0 +1,187 @@
+[
+  {
+    "name": "Stripe",
+    "slug": "stripe",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Airbnb",
+    "slug": "airbnb",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Cloudflare",
+    "slug": "cloudflare",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Datadog",
+    "slug": "datadog",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "GitLab",
+    "slug": "gitlab",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Coinbase",
+    "slug": "coinbase",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Figma",
+    "slug": "figma",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Discord",
+    "slug": "discord",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Verkada",
+    "slug": "verkada",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Anduril",
+    "slug": "andurilindustries",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Spotify",
+    "slug": "spotify",
+    "platform": "lever"
+  },
+  {
+    "name": "Ramp",
+    "slug": "ramp",
+    "platform": "ashby"
+  },
+  {
+    "name": "OpenAI",
+    "slug": "openai",
+    "platform": "ashby"
+  },
+  {
+    "name": "SpaceX",
+    "slug": "spacex",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Lyft",
+    "slug": "lyft",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Twilio",
+    "slug": "twilio",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Pinterest",
+    "slug": "pinterest",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Databricks",
+    "slug": "databricks",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Block",
+    "slug": "block",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Robinhood",
+    "slug": "robinhood",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Instacart",
+    "slug": "instacart",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Waymo",
+    "slug": "waymo",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Nuro",
+    "slug": "nuro",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Elastic",
+    "slug": "elastic",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "MongoDB",
+    "slug": "mongodb",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Grammarly",
+    "slug": "grammarly",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Dropbox",
+    "slug": "dropbox",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Okta",
+    "slug": "okta",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Zscaler",
+    "slug": "zscaler",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Toast",
+    "slug": "toast",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Brex",
+    "slug": "brex",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Gusto",
+    "slug": "gusto",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Airtable",
+    "slug": "airtable",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Notion",
+    "slug": "notion",
+    "platform": "ashby"
+  },
+  {
+    "name": "Mastercard",
+    "slug": "mastercard/CorporateCareers",
+    "platform": "workday"
+  },
+  {
+    "name": "Capital One",
+    "slug": "capitalone/Capital_One",
+    "platform": "workday"
+  },
+  {
+    "name": "Amazon",
+    "slug": "amazon",
+    "platform": "greenhouse"
+  }
+]
