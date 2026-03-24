@@ -131,13 +131,15 @@ class DiceAgent(BaseAgent):
                 continue
                 
             logger.info(f"[dice] Searching category: {category}")
-            for kw in keywords[:4]:
+            for kw in keywords:
                 try:
                     result = await self.search(kw, category)
                     if result:
                         all_jobs.extend(result)
                 except Exception as e:
                     logger.error(f"[dice] Error searching '{kw}': {e}")
+                # Use a lightweight delay between massive Playwright loads
                 await asyncio.sleep(2)
+                
         logger.info(f"[dice] Total jobs found: {len(all_jobs)}")
         return all_jobs
