@@ -140,6 +140,14 @@ SEARCH_CATEGORIES = {
         "flight test engineer",
         "aerodynamics engineer",
     ],
+    "State Government (DMV)": [
+        "State of Maryland",
+        "Commonwealth of Virginia",
+        "District of Columbia Government",
+        "Maryland State jobs",
+        "Virginia State jobs",
+        "Washington DC Government",
+    ],
     "Healthcare": [
         "registered nurse",
         "physician",

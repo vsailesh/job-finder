@@ -114,6 +114,22 @@ def render_metric(value, label, color="#667eea"):
     """, unsafe_allow_html=True)
 
 
+def classify_seniority(title: str) -> str:
+    t = str(title).lower()
+    if any(w in t for w in ['intern', 'trainee', 'entry', 'graduate']):
+        return 'Entry'
+    elif any(w in t for w in ['junior', 'jr ', 'associate']):
+        return 'Junior'
+    elif any(w in t for w in ['senior', 'sr ', ' iii', 'staff']):
+        return 'Senior'
+    elif any(w in t for w in ['lead', 'principal', 'architect']):
+        return 'Lead / Principal'
+    elif any(w in t for w in ['director', 'vp', 'vice president', 'head of']):
+        return 'Director / VP'
+    elif any(w in t for w in ['cto', 'ceo', 'cfo', 'chief']):
+        return 'C-Level'
+    return 'Mid-Level'
+
 def main():
     # ─── Header ─────────────────────────────────────────────
     st.markdown("""
@@ -139,6 +155,12 @@ def main():
         if df.empty:
             st.warning("No jobs found. Run the agent first:\n```\npython main.py\n```")
             st.stop()
+
+        df["seniority_level"] = df["title"].apply(classify_seniority)
+
+        seniorities = ['Entry', 'Junior', 'Mid-Level', 'Senior', 'Lead / Principal', 'Director / VP', 'C-Level']
+        available_seniorities = [s for s in seniorities if s in df["seniority_level"].unique()]
+        selected_seniorities = st.multiselect("Seniority", available_seniorities, default=available_seniorities)
 
         sources = sorted(df["source"].unique().tolist())
         selected_sources = st.multiselect("Sources", sources, default=sources)
@@ -180,7 +202,7 @@ def main():
             st.rerun()
 
     # ─── Apply Filters ──────────────────────────────────────
-    mask = df["source"].isin(selected_sources) & df["category"].isin(selected_categories) & df["job_type"].isin(selected_types)
+    mask = df["source"].isin(selected_sources) & df["category"].isin(selected_categories) & df["job_type"].isin(selected_types) & df["seniority_level"].isin(selected_seniorities)
 
     if search_term:
         sl = search_term.lower()
@@ -744,26 +766,9 @@ asyncio.run(run())
     with tab6:
         st.markdown("### 💰 Salary & Market Analytics")
 
-        # Helper: classify seniority from title
-        def classify_seniority(title: str) -> str:
-            t = title.lower()
-            if any(w in t for w in ['intern', 'trainee', 'entry', 'graduate']):
-                return 'Entry'
-            elif any(w in t for w in ['junior', 'jr ', 'associate']):
-                return 'Junior'
-            elif any(w in t for w in ['senior', 'sr ', ' iii', 'staff']):
-                return 'Senior'
-            elif any(w in t for w in ['lead', 'principal', 'architect']):
-                return 'Lead / Principal'
-            elif any(w in t for w in ['director', 'vp', 'vice president', 'head of']):
-                return 'Director / VP'
-            elif any(w in t for w in ['cto', 'ceo', 'cfo', 'chief']):
-                return 'C-Level'
-            return 'Mid-Level'
-
         sal_df = filtered[filtered["salary_min"] > 0].copy()
         sal_df["salary_mid"] = (sal_df["salary_min"] + sal_df["salary_max"]) / 2
-        sal_df["seniority_level"] = sal_df["title"].apply(classify_seniority)
+        # seniority_level is already populated globally
 
         # ── Key Salary Metrics ──
         if len(sal_df) > 0:
