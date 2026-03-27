@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -45,6 +46,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git lfs install
           
           # Force add the database in case it's in .gitignore (using || true so it doesn't fail if missing)
           git add -f data/jobs.db || true
