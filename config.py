@@ -31,15 +31,23 @@ USE_TURSO = bool(TURSO_DATABASE_URL and TURSO_AUTH_TOKEN)
 
 def get_database():
     """Factory to get the right database instance based on config."""
-    if USE_TURSO:
-        try:
-            from models.turso_database import TursoDatabase
-            return TursoDatabase(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
-        except ImportError:
-            logger.warning("libsql-experimental not installed, falling back to SQLite")
+    try:
+        if USE_TURSO:
+            try:
+                from models.turso_database import TursoDatabase
+                return TursoDatabase(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
+            except ImportError:
+                if logger:
+                    logger.warning("libsql-experimental not installed, falling back to SQLite")
+                from models.database import JobDatabase
+                return JobDatabase(DB_PATH)
+        else:
             from models.database import JobDatabase
             return JobDatabase(DB_PATH)
-    else:
+    except Exception as e:
+        # Fallback to SQLite if anything goes wrong
+        if logger:
+            logger.error(f"Error getting database: {e}, falling back to SQLite")
         from models.database import JobDatabase
         return JobDatabase(DB_PATH)
 

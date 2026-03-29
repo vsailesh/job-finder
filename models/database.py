@@ -10,7 +10,6 @@ from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 
 from models.job import Job
-import config
 
 logger = logging.getLogger(__name__)
 
@@ -139,8 +138,17 @@ class JobDatabase:
                     inserted += 1
                 except aiosqlite.IntegrityError:
                     # Exact duplicate found, check for fuzzy matches
-                    if config.ENABLE_FUZZY_DEDUP and FUZZY_AVAILABLE:
-                        is_fuzzy_dup = await self._is_fuzzy_duplicate(db, job)
+                    # Import config locally to avoid circular imports
+                    try:
+                        import config
+                        enable_fuzzy = config.ENABLE_FUZZY_DEDUP
+                        match_threshold = config.FUZZY_MATCH_THRESHOLD
+                    except:
+                        enable_fuzzy = False
+                        match_threshold = 85
+
+                    if enable_fuzzy and FUZZY_AVAILABLE:
+                        is_fuzzy_dup = await self._is_fuzzy_duplicate(db, job, match_threshold)
                         if is_fuzzy_dup:
                             fuzzy_skipped += 1
                             # Optionally update the existing job with newer data
@@ -152,7 +160,7 @@ class JobDatabase:
         logger.info(f"Inserted {inserted} new jobs, skipped {total_skipped} duplicates ({fuzzy_skipped} fuzzy)")
         return {"inserted": inserted, "skipped": total_skipped, "fuzzy_skipped": fuzzy_skipped}
 
-    async def _is_fuzzy_duplicate(self, db: aiosqlite.Connection, job: Job) -> bool:
+    async def _is_fuzzy_duplicate(self, db: aiosqlite.Connection, job: Job, threshold: int = 85) -> bool:
         """
         Check if a job is a fuzzy duplicate of existing jobs.
 
@@ -193,7 +201,7 @@ class JobDatabase:
             # Calculate fuzzy similarity ratio
             similarity = fuzz.token_sort_ratio(job_compare_str, existing_compare_str)
 
-            if similarity >= config.FUZZY_MATCH_THRESHOLD:
+            if similarity >= threshold:
                 logger.debug(
                     f"[dedup] Fuzzy match found: '{job.title}' @ {job.company} "
                     f"matches '{existing_title}' @ {existing_company} "
