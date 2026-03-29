@@ -128,6 +128,315 @@ def classify_seniority(title: str) -> str:
         return 'C-Level'
     return 'Mid-Level'
 
+def classify_sector(title: str, category: str, description: str = "") -> str:
+    """
+    Classify jobs into broader sectors based on NAICS (North American Industry Classification System)
+    and SOC (Standard Occupational Classification) standards from US Bureau of Labor Statistics.
+
+    NAICS Sectors Reference: https://www.census.gov/naics/
+    SOC Occupational Groups: https://www.bls.gov/soc/
+    """
+    t = str(title).lower()
+    c = str(category).lower()
+    d = str(description).lower()
+    combined_text = f"{t} {c} {d}"
+
+    # ═══════════════════════════════════════════════════════════════
+    # TECHNOLOGY SECTORS (NAICS 51 - Information)
+    # ═══════════════════════════════════════════════════════════════
+
+    # AI & Machine Learning (SOC 15-2000+ - Computer and Information Research Scientists)
+    if any(w in combined_text for w in ['artificial intelligence', 'machine learning', 'deep learning', 'nlp',
+                                          'computer vision', 'llm', 'generative ai', 'mlops', 'ai engineer',
+                                          'data scientist', 'ml engineer', 'neural network', 'computer vision engineer']):
+        return 'AI & Machine Learning'
+
+    # Blockchain & Crypto (Emerging technology sector)
+    if any(w in combined_text for w in ['blockchain', 'cryptocurrency', 'web3', 'smart contract', 'defi',
+                                          'nft', 'bitcoin', 'ethereum', 'solidity', 'crypto engineer',
+                                          'web3 developer', 'decentralized']):
+        return 'Blockchain & Crypto'
+
+    # IT & Software (NAICS 5112, 5415 - Software Publishers, Computer Systems Design)
+    # (SOC 15-1000+ - Computer and Mathematical Occupations)
+    if any(w in combined_text for w in ['software', 'developer', 'programmer', 'web', 'mobile', 'full stack',
+                                          'backend', 'frontend', 'devops', 'cloud', 'cybersecurity', 'network',
+                                          'database', 'it ', 'information technology', 'full-stack', 'back-end',
+                                          'front-end', 'software engineer', 'applications developer', 'systems analyst']):
+        return 'IT & Software'
+
+    # ═══════════════════════════════════════════════════════════════
+    # ENERGY SECTOR (NAICS 22 - Utilities, 21 - Mining, Oil & Gas)
+    # Reference: US Department of Energy - Energy Employment Report
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['oil and gas', 'oil & gas', 'petroleum', 'upstream', 'downstream',
+                                          'midstream', 'drilling', 'refining', 'offshore', 'pipeline',
+                                          'lng', 'liquefied natural gas', 'fossil fuel', 'petroleum engineer',
+                                          'drilling engineer', 'reservoir engineer']):
+        return 'Energy - Oil & Gas'
+
+    if any(w in combined_text for w in ['renewable energy', 'solar', 'wind', 'geothermal', 'hydropower',
+                                          'biomass', 'clean energy', 'green energy', 'solar engineer',
+                                          'wind turbine', 'photovoltaic', 'renewables', 'energy storage']):
+        return 'Energy - Renewables'
+
+    if any(w in combined_text for w in ['nuclear energy', 'nuclear power', 'reactor', 'radiation',
+                                          'isotope', 'health physics', 'criticality', 'nuclear engineering',
+                                          'nuclear operator', 'nuclear safety']):
+        return 'Energy - Nuclear'
+
+    if any(w in combined_text for w in ['utility', 'utilities', 'power generation', 'electric grid',
+                                          'transmission', 'distribution', 'substation', 'power plant',
+                                          'grid operator', 'electrical utility', 'energy management',
+                                          'smart grid', 'metering', 'power systems']):
+        return 'Energy - Utilities & Grid'
+
+    if any(w in combined_text for w in ['energy', 'energy efficiency', 'sustainability', 'esg',
+                                          'carbon', 'climate tech', 'battery technology', 'hydrogen',
+                                          'energy analyst', 'energy auditor', 'cleantech']):
+        return 'Energy - General & Cleantech'
+
+    # ═══════════════════════════════════════════════════════════════
+    # TRANSPORTATION & SHIPPING (NAICS 48-49 - Transportation and Warehousing)
+    # Reference: Bureau of Transportation Statistics
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['maritime', 'shipping', 'port', 'sea transport', 'ocean freight',
+                                          'vessel', 'ship', 'cargo ship', 'container shipping', 'marine',
+                                          'maritime engineer', 'port operations', 'harbor', 'stevedore',
+                                          'marine logistics', 'ocean carrier', 'bulk shipping']):
+        return 'Shipping & Maritime'
+
+    if any(w in combined_text for w in ['logistics', 'supply chain', 'freight', 'warehouse', 'distribution',
+                                          'inventory', 'fulfillment', 'shipping coordinator', 'logistics manager',
+                                          'supply chain analyst', 'freight forwarder', 'last mile', '3pl', '4pl']):
+        return 'Logistics & Supply Chain'
+
+    if any(w in combined_text for w in ['truck', 'trucking', 'freight transportation', 'delivery', 'courier',
+                                          'fleet', 'transportation', 'route', 'driver', 'dispatch', 'carrier',
+                                          'truck driver', 'delivery driver', 'fleet manager']):
+        return 'Transportation - Ground'
+
+    if any(w in combined_text for w in ['aviation', 'airline', 'airport', 'air cargo', 'air freight',
+                                          'flight operations', 'air traffic', 'aviation maintenance',
+                                          'airline pilot', 'aircraft dispatcher']):
+        return 'Transportation - Aviation'
+
+    if any(w in combined_text for w in ['rail', 'railroad', 'train', 'railway', 'locomotive',
+                                          'rail freight', 'transit', 'metro', 'rail operations']):
+        return 'Transportation - Rail'
+
+    # ═══════════════════════════════════════════════════════════════
+    # HEALTHCARE (NAICS 62 - Health Care and Social Assistance)
+    # SOC 29-0000+ - Healthcare Practitioners and Technical Occupations
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['nurse', 'nursing', 'rn', 'lpn', 'cna', 'nurse practitioner',
+                                          'physician', 'doctor', 'medical doctor', 'surgeon', 'healthcare',
+                                          'clinical', 'pharmacist', 'radiologist', 'therapist', 'medical',
+                                          'health care', 'patient care', 'registered nurse', 'clinical nurse']):
+        return 'Healthcare & Nursing'
+
+    # ═══════════════════════════════════════════════════════════════
+    # DEFENSE (NAICS 33 - Defense Manufacturing)
+    # Reference: US Department of Defense - Occupational Classification
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['defense', 'military', 'army', 'navy', 'air force', 'weapons',
+                                          'combat', 'security clearance', 'dod', 'intelligence analyst',
+                                          'defense contractor', 'military analyst', 'defense systems',
+                                          'signals intelligence', 'counterintelligence', 'combat systems',
+                                          'defense program manager']):
+        return 'Defense & Military'
+
+    # ═══════════════════════════════════════════════════════════════
+    # MANUFACTURING (NAICS 31-33 - Manufacturing)
+    # SOC 47-0000+ - Production Occupations
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['manufacturing', 'production', 'plant', 'factory', 'industrial',
+                                          'quality control', 'cnc', 'machinist', 'assembly', 'fabrication',
+                                          'production supervisor', 'plant manager', 'lean manufacturing',
+                                          'six sigma', 'production engineer', 'manufacturing engineer']):
+        return 'Manufacturing'
+
+    # ═══════════════════════════════════════════════════════════════
+    # FINANCE (NAICS 52 - Finance and Insurance)
+    # SOC 13-0000+ - Business and Financial Operations Occupations
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['finance', 'financial', 'investment', 'trading', 'banking',
+                                          'fintech', 'quantitative', 'portfolio', 'risk analyst',
+                                          'financial analyst', 'investment banker', 'trader', 'asset management',
+                                          'corporate finance', 'financial planning']):
+        return 'Finance & FinTech'
+
+    # ═══════════════════════════════════════════════════════════════
+    # ADVANCED MANUFACTURING & TECHNOLOGY
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['robotics', 'automation', 'mechatronics', 'robot',
+                                          'autonomous systems', 'control systems', 'plc', 'embedded systems',
+                                          'industrial automation', 'robotics engineer', 'automation engineer']):
+        return 'Robotics & Automation'
+
+    if any(w in combined_text for w in ['aerospace', 'aviation', 'aircraft', 'satellite', 'uav',
+                                          'drone', 'propulsion', 'flight', 'orbital', 'aeronautics',
+                                          'astronautics', 'avionics', 'flight systems', 'unmanned aerial systems']):
+        return 'Aerospace'
+
+    # ═══════════════════════════════════════════════════════════════
+    # LIFE SCIENCES (NAICS 3254 - Pharmaceutical and Medicine Manufacturing)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['pharmaceutical', 'biotech', 'biotechnology', 'drug development',
+                                          'clinical trials', 'bioinformatics', 'genomics', 'regulatory affairs',
+                                          'clinical research', 'pharmaceutical scientist', 'biomedical']):
+        return 'Pharma & Biotech'
+
+    # ═══════════════════════════════════════════════════════════════
+    # EDUCATION (NAICS 61 - Educational Services)
+    # SOC 25-0000+ - Educational Instruction and Library Occupations
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['teacher', 'education', 'professor', 'instructor', 'trainer',
+                                          'curriculum', 'academic', 'educator', 'faculty', 'teaching',
+                                          'principal', 'school administrator']):
+        return 'Education'
+
+    # ═══════════════════════════════════════════════════════════════
+    # GENERAL ENGINEERING (SOC 17-0000+ - Architecture and Engineering Occupations)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['engineer', 'engineering', 'civil engineer', 'structural engineer',
+                                          'electrical engineer', 'mechanical engineer', 'chemical engineer',
+                                          'industrial engineer']) and 'manufacturing' not in combined_text:
+        return 'General Engineering'
+
+    # ═══════════════════════════════════════════════════════════════
+    # BUSINESS & PROFESSIONAL (NAICS 54 - Professional, Scientific, and Technical Services)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['admin', 'administrative', 'assistant', 'clerk', 'receptionist',
+                                          'office', 'secretary', 'coordinator', 'office manager']):
+        return 'Administrative'
+
+    if any(w in combined_text for w in ['manager', 'management', 'director', 'head of', 'vp', 'chief',
+                                          'executive', 'leader', 'business manager', 'operations manager']):
+        return 'Management'
+
+    if any(w in combined_text for w in ['sales', 'marketing', 'business development', 'account manager',
+                                          'revenue', 'growth', 'sales representative', 'marketing manager']):
+        return 'Sales & Marketing'
+
+    if any(w in combined_text for w in ['research', 'r&d', 'scientist', 'analyst', 'data analyst',
+                                          'research scientist', 'research associate']):
+        return 'Research & Development'
+
+    # ═══════════════════════════════════════════════════════════════
+    # CONSTRUCTION & TRADES (NAICS 23 - Construction)
+    # SOC 47-0000+ - Construction and Extraction Occupations
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['electrician', 'plumber', 'carpenter', 'welder', 'mechanic',
+                                          'technician', 'maintenance', 'construction', 'skilled trade',
+                                          'hvac', 'pipefitter', 'ironworker', 'heavy equipment']):
+        return 'Skilled Trades'
+
+    return 'Other'
+
+def classify_job_type(title: str, category: str, description: str = "") -> str:
+    """
+    Classify jobs into collar types and work categories based on SOC (Standard Occupational Classification)
+    Major Groups and US EEOC (Equal Employment Opportunity Commission) job categories.
+
+    SOC Major Groups Reference: https://www.bls.gov/soc/2018/soc_2018_major_groups.htm
+    EEOC Categories: https://www.eeoc.gov/statistics/employment/jobpatterns
+    """
+    t = str(title).lower()
+    c = str(category).lower()
+    d = str(description).lower()
+    combined_text = f"{t} {c} {d}"
+
+    # ═══════════════════════════════════════════════════════════════
+    # SOC 15-0000: Computer and Mathematical Occupations (IT / Technical)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['software', 'developer', 'engineer', 'programmer', 'data scientist',
+                                          'machine learning', 'ai', 'artificial intelligence', 'cloud', 'devops',
+                                          'cybersecurity', 'cyber security', 'network', 'system admin', 'database',
+                                          'web', 'mobile', 'full stack', 'backend', 'frontend', 'qa', 'test engineer',
+                                          'data engineer', 'mlops', 'site reliability', 'sre', 'information security',
+                                          'penetration tester', 'cloud architect', 'solutions architect']):
+        return 'IT / Technical'
+
+    # ═══════════════════════════════════════════════════════════════
+    # SOC 43-0000: Office and Administrative Support (Administrative)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['admin', 'administrative', 'assistant', 'clerk', 'receptionist',
+                                          'office', 'secretary', 'data entry', 'office manager', 'executive assistant',
+                                          'office assistant', 'administrative assistant', 'file clerk', 'word processor',
+                                          'desktop publishing']):
+        return 'Administrative'
+
+    # ═══════════════════════════════════════════════════════════════
+    # SOC 11-0000: Management Occupations (Managerial)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['manager', 'management', 'director', 'vp', 'vice president', 'chief',
+                                          'ceo', 'cto', 'cfo', 'cio', 'coo', 'head of', 'lead', 'supervisor',
+                                          'team lead', 'principal', 'executive', 'administrator', 'operations manager',
+                                          'general manager', 'program manager', 'product manager']):
+        return 'Managerial'
+
+    # ═══════════════════════════════════════════════════════════════
+    # SOC 47-0000: Construction and Extraction (Blue Collar)
+    # SOC 51-0000: Production Occupations (Blue Collar)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['manufacturing', 'production', 'factory', 'warehouse', 'logistics',
+                                          'driver', 'mechanic', 'technician', 'maintenance', 'construction',
+                                          'electrician', 'plumber', 'welder', 'carpenter', 'machinist', 'operator',
+                                          'labor', 'laborer', 'assembly', 'fabrication', 'quality control', 'inspector',
+                                          'heavy equipment', 'crane', 'forklift', 'machine operator', 'production worker',
+                                          'packer', 'packaging', 'material handling', 'shipping', 'receiving']):
+        return 'Blue Collar'
+
+    # ═══════════════════════════════════════════════════════════════
+    # SOC 13-0000: Business and Financial Operations (White Collar)
+    # SOC 17-0000: Architecture and Engineering (White Collar)
+    # SOC 19-0000: Life, Physical, and Social Science Occupations (White Collar)
+    # SOC 25-0000: Educational Instruction and Library (White Collar)
+    # SOC 29-0000: Healthcare Practitioners (White Collar)
+    # SOC 41-0000: Sales and Related (White Collar)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['analyst', 'consultant', 'accountant', 'auditor', 'financial analyst',
+                                          'business analyst', 'data analyst', 'legal', 'attorney', 'lawyer', 'paralegal',
+                                          'architect', 'scientist', 'research scientist', 'pharmacist', 'doctor',
+                                          'physician', 'nurse', 'teacher', 'professor', 'engineer', 'investment banker',
+                                          'actuary', 'economist', 'statistician', 'researcher', 'advisor', 'specialist']):
+        return 'White Collar'
+
+    # ═══════════════════════════════════════════════════════════════
+    # SOC 41-0000: Sales and Related (Service Industry)
+    # SOC 35-0000: Food Preparation and Serving (Service Industry)
+    # SOC 37-0000: Building and Grounds Cleaning and Maintenance (Service Industry)
+    # SOC 39-0000: Personal Care and Service (Service Industry)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['customer service', 'sales', 'retail', 'hospitality', 'food service',
+                                          'server', 'cashier', 'representative', 'support', 'call center',
+                                          'waiter', 'waitress', 'bartender', 'host', 'hostess', 'cook', 'chef',
+                                          'cleaner', 'janitor', 'security guard', 'personal care', 'home health aide',
+                                          'cashier', 'retail sales', 'sales associate', 'account representative']):
+        return 'Service Industry'
+
+    # ═══════════════════════════════════════════════════════════════
+    # SOC 27-0000: Arts, Design, Entertainment, Sports, and Media (Creative)
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['designer', 'writer', 'editor', 'journalist', 'artist', 'content creator',
+                                          'marketing', 'creative', 'ux', 'ui', 'graphic designer', 'content writer',
+                                          'copywriter', 'photographer', 'videographer', 'producer', 'director',
+                                          'social media', 'content manager', 'brand manager', 'art director',
+                                          'creative director', 'illustrator', 'animator', 'game designer']):
+        return 'Creative'
+
+    # ═══════════════════════════════════════════════════════════════
+    # Transportation (Blue Collar subset - but distinct for analysis)
+    # SOC 53-0000: Transportation and Material Moving Occupations
+    # ═══════════════════════════════════════════════════════════════
+    if any(w in combined_text for w in ['truck driver', 'delivery driver', 'bus driver', 'taxi', 'uber',
+                                          'lyft', 'courier', 'delivery', 'pilot', 'captain', 'mate',
+                                          'flight attendant', 'air traffic controller', 'conductor', 'locomotive']):
+        return 'Transportation'
+
+    return 'Other'
+
 def main():
     # ─── Header ─────────────────────────────────────────────
     st.markdown("""
@@ -155,6 +464,8 @@ def main():
             st.stop()
 
         df["seniority_level"] = df["title"].apply(classify_seniority)
+        df["sector"] = df.apply(lambda r: classify_sector(r.get("title", ""), r.get("category", ""), r.get("description", "")), axis=1)
+        df["job_category"] = df.apply(lambda r: classify_job_type(r.get("title", ""), r.get("category", ""), r.get("description", "")), axis=1)
 
         seniorities = ['Entry', 'Junior', 'Mid-Level', 'Senior', 'Lead / Principal', 'Director / VP', 'C-Level']
         available_seniorities = [s for s in seniorities if s in df["seniority_level"].unique()]
@@ -180,6 +491,14 @@ def main():
                 default_types = [ft]
         selected_types = st.multiselect("Job Types", job_types, default=default_types)
 
+        # New: Sector Filter
+        sectors = sorted(df["sector"].unique().tolist())
+        selected_sectors = st.multiselect("Sectors", sectors, default=sectors)
+
+        # New: Job Category Filter (IT, Admin, etc.)
+        job_categories = sorted(df["job_category"].unique().tolist())
+        selected_job_categories = st.multiselect("Job Categories (IT, Admin, etc.)", job_categories, default=job_categories)
+
         search_term = st.text_input("🔎 Search", placeholder="Title, company...")
 
         st.markdown("#### 💰 Salary Range")
@@ -200,7 +519,12 @@ def main():
             st.rerun()
 
     # ─── Apply Filters ──────────────────────────────────────
-    mask = df["source"].isin(selected_sources) & df["category"].isin(selected_categories) & df["job_type"].isin(selected_types) & df["seniority_level"].isin(selected_seniorities)
+    mask = (df["source"].isin(selected_sources) &
+            df["category"].isin(selected_categories) &
+            df["job_type"].isin(selected_types) &
+            df["seniority_level"].isin(selected_seniorities) &
+            df["sector"].isin(selected_sectors) &
+            df["job_category"].isin(selected_job_categories))
 
     if search_term:
         sl = search_term.lower()
@@ -226,6 +550,14 @@ def main():
     with col3: render_metric(f"{len(filtered[filtered['job_type']=='corporate']):,}", "Corporate", "#3730a3")
     with col4: render_metric(f"{len(filtered[filtered['job_type']=='remote']):,}", "Remote", "#065f46")
     with col5: render_metric(f"{filtered['salary_min'].notna().sum():,}", "With Salary", "#92400e")
+
+    # ─── Second Metrics Row: Job Category Breakdown ───────────────
+    col6, col7, col8, col9, col10 = st.columns(5)
+    with col6: render_metric(f"{len(filtered[filtered['job_category']=='IT / Technical']):,}", "IT/Tech Jobs", "#667eea")
+    with col7: render_metric(f"{len(filtered[filtered['job_category']=='Administrative']):,}", "Admin Jobs", "#fbbf24")
+    with col8: render_metric(f"{len(filtered[filtered['job_category']=='Blue Collar']):,}", "Blue Collar", "#10b981")
+    with col9: render_metric(f"{len(filtered[filtered['job_category']=='White Collar']):,}", "White Collar", "#3b82f6")
+    with col10: render_metric(f"{len(filtered[filtered['job_category']=='Managerial']):,}", "Management", "#f59e0b")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -321,6 +653,449 @@ def main():
             active_filters.append(f"Company: **{st.session_state.filter_company}**")
         if active_filters:
             st.info("🔍 Active click filters: " + " · ".join(active_filters) + "  — Use 🔄 Reset in sidebar to clear")
+
+        st.markdown("---")
+
+        # ═══════════════ NEW VISUALIZATIONS: Sector & Job Type Analysis ═══════════════
+        st.markdown("### 🎯 Sector & Job Type Analysis")
+
+        # Row 3: Sector Distribution & Job Type Distribution
+        chart_col5, chart_col6 = st.columns(2)
+
+        with chart_col5:
+            sector_counts = filtered["sector"].value_counts().reset_index()
+            sector_counts.columns = ["Sector", "Count"]
+            fig_sector = px.bar(
+                sector_counts, x="Count", y="Sector", orientation="h",
+                color="Count", color_continuous_scale=["#d1fae5", "#059669", "#065f46"],
+                title="Jobs by Sector (Industry-wise)",
+            )
+            fig_sector.update_layout(
+                showlegend=False, coloraxis_showscale=False,
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter"), height=450,
+            )
+            st.plotly_chart(fig_sector, use_container_width=True, key="sector_chart")
+
+        with chart_col6:
+            job_type_counts = filtered["job_category"].value_counts().reset_index()
+            job_type_counts.columns = ["Job Type", "Count"]
+
+            # Custom color scheme for job types
+            job_type_colors = {
+                'IT / Technical': '#667eea',
+                'Administrative': '#fbbf24',
+                'Managerial': '#f59e0b',
+                'Blue Collar': '#10b981',
+                'White Collar': '#3b82f6',
+                'Service Industry': '#ec4899',
+                'Creative': '#8b5cf6',
+                'Other': '#9ca3af'
+            }
+
+            fig_job_type = px.pie(
+                job_type_counts, values="Count", names="Job Type",
+                title="Jobs by Category (IT, Admin, Blue/White Collar, etc.)",
+                hole=0.4,
+                color_discrete_map=job_type_colors
+            )
+            fig_job_type.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter"), height=450,
+            )
+            st.plotly_chart(fig_job_type, use_container_width=True, key="job_type_chart")
+
+        # Row 4: Detailed Sector Breakdown
+        st.markdown("#### 📊 Detailed Sector Breakdown")
+
+        # Create tabs for different sector analyses
+        sector_tab1, sector_tab2, sector_tab3, sector_tab4 = st.tabs(["🏭 Top Sectors", "⚡ Energy Deep Dive", "🚢 Transportation & Shipping", "🔍 Cross Analysis"])
+
+        with sector_tab1:
+            col_a1, col_a2, col_a3 = st.columns(3)
+
+            with col_a1:
+                # Top sectors by count
+                top_sectors = filtered["sector"].value_counts().head(10)
+                st.markdown("**Top 10 Sectors by Job Count**")
+                for idx, (sector, count) in enumerate(top_sectors.items(), 1):
+                    percentage = (count / len(filtered)) * 100
+                    st.markdown(f"{idx}. **{sector}**: {count:,} jobs ({percentage:.1f}%)")
+
+            with col_a2:
+                # Sectors by salary (if available)
+                if filtered["salary_min"].notna().any():
+                    sector_salary = filtered[filtered["salary_min"].notna()].groupby("sector").agg(
+                        median_salary=("salary_min", "median"),
+                        avg_salary=("salary_min", "mean"),
+                        count=("salary_min", "count")
+                    ).sort_values("median_salary", ascending=False).head(10)
+
+                    st.markdown("**Top 10 Sectors by Median Salary**")
+                    for idx, (sector, row) in enumerate(sector_salary.iterrows(), 1):
+                        st.markdown(f"{idx}. **{sector}**: ${row['median_salary']:,.0f} (n={row['count']:.0f})")
+                else:
+                    st.info("No salary data available")
+
+            with col_a3:
+                # Remote work by sector
+                if "remote" in filtered.columns:
+                    remote_by_sector = filtered.groupby("sector").agg(
+                        total=("remote", "count"),
+                        remote_jobs=("remote", "sum")
+                    )
+                    remote_by_sector["remote_pct"] = (remote_by_sector["remote_jobs"] / remote_by_sector["total"] * 100).round(1)
+                    remote_by_sector = remote_by_sector[remote_by_sector["total"] >= 5].sort_values("remote_pct", ascending=False).head(10)
+
+                    st.markdown("**Top 10 Sectors by Remote Work %**")
+                    for idx, (sector, row) in enumerate(remote_by_sector.iterrows(), 1):
+                        st.markdown(f"{idx}. **{sector}**: {row['remote_pct']}% remote ({row['remote_jobs']:.0f}/{row['total']:.0f})")
+
+        with sector_tab4:
+            st.markdown("### 🔍 Cross-Analysis & Heatmaps")
+            col_c1, col_c2 = st.columns(2)
+
+            with col_c1:
+                # Sector × Job Type Heatmap
+                st.markdown("**Sector × Job Type Distribution**")
+                cross_tab = pd.crosstab(filtered["sector"], filtered["job_category"])
+                cross_tab = cross_tab.loc[cross_tab.sum(axis=1).sort_values(ascending=False).index]
+                cross_tab = cross_tab.loc[:, cross_tab.sum(axis=0).sort_values(ascending=False).index]
+
+                fig_heat = px.imshow(
+                    cross_tab.values,
+                    labels=dict(x="Job Type", y="Sector", color="Job Count"),
+                    x=cross_tab.columns,
+                    y=cross_tab.index,
+                    color_continuous_scale="YlOrRd",
+                    title="Sector vs Job Type Heatmap"
+                )
+                fig_heat.update_layout(
+                    height=500,
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(family="Inter")
+                )
+                st.plotly_chart(fig_heat, use_container_width=True)
+
+            with col_c2:
+                # IT Jobs Deep Dive
+                st.markdown("**IT/Tech Jobs Deep Dive**")
+                it_jobs = filtered[filtered["job_category"] == "IT / Technical"]
+
+                if len(it_jobs) > 0:
+                    st.metric("Total IT Jobs", f"{len(it_jobs):,}")
+
+                    # Top IT skills/sources
+                    if "source" in it_jobs.columns:
+                        it_sources = it_jobs["source"].value_counts().head(5)
+                        st.markdown("**Top Sources for IT Jobs**")
+                        for source, count in it_sources.items():
+                            st.markdown(f"- {source}: {count:,}")
+
+                    # IT by seniority
+                    it_seniority = it_jobs["seniority_level"].value_counts()
+                    st.markdown("**IT Jobs by Seniority**")
+                    for seniority, count in it_seniority.items():
+                        st.markdown(f"- {seniority}: {count:,}")
+                else:
+                    st.info("No IT jobs found in current filter")
+
+        with sector_tab2:
+            st.markdown("### ⚡ Energy Sector Deep Dive")
+            col_e1, col_e2, col_e3 = st.columns(3)
+
+            # Filter for all energy-related sectors
+            energy_sectors = [s for s in filtered["sector"].unique() if 'Energy' in s]
+            energy_jobs = filtered[filtered["sector"].isin(energy_sectors)]
+
+            if len(energy_jobs) > 0:
+                with col_e1:
+                    st.markdown("**Energy Sector Breakdown**")
+                    energy_breakdown = energy_jobs["sector"].value_counts()
+                    for sector, count in energy_breakdown.items():
+                        percentage = (count / len(energy_jobs)) * 100
+                        st.markdown(f"- **{sector}**: {count:,} jobs ({percentage:.1f}%)")
+
+                with col_e2:
+                    st.markdown("**Energy by Job Type**")
+                    energy_by_type = energy_jobs["job_category"].value_counts()
+                    for job_type, count in energy_by_type.items():
+                        percentage = (count / len(energy_jobs)) * 100
+                        st.markdown(f"- **{job_type}**: {count:,} jobs ({percentage:.1f}%)")
+
+                with col_e3:
+                    st.markdown("**Energy by Seniority**")
+                    energy_seniority = energy_jobs["seniority_level"].value_counts()
+                    for seniority, count in energy_seniority.items():
+                        percentage = (count / len(energy_jobs)) * 100
+                        st.markdown(f"- **{seniority}**: {count:,} jobs ({percentage:.1f}%)")
+
+                st.markdown("---")
+
+                # Energy salary analysis
+                if energy_jobs["salary_min"].notna().any():
+                    col_e4, col_e5 = st.columns(2)
+
+                    with col_e4:
+                        st.markdown("**Energy Sectors by Salary**")
+                        energy_salary = energy_jobs[energy_jobs["salary_min"].notna()].groupby("sector").agg(
+                            median_salary=("salary_min", "median"),
+                            avg_salary=("salary_min", "mean"),
+                            count=("salary_min", "count")
+                        ).sort_values("median_salary", ascending=False)
+
+                        for sector, row in energy_salary.iterrows():
+                            st.markdown(f"- **{sector}**: ${row['median_salary']:,.0f} median (n={row['count']:.0f})")
+
+                    with col_e5:
+                        st.markdown("**Energy Remote Work %**")
+                        if "remote" in energy_jobs.columns:
+                            energy_remote = energy_jobs.groupby("sector").agg(
+                                total=("remote", "count"),
+                                remote_jobs=("remote", "sum")
+                            )
+                            energy_remote["remote_pct"] = (energy_remote["remote_jobs"] / energy_remote["total"] * 100).round(1)
+
+                            for sector, row in energy_remote.iterrows():
+                                st.markdown(f"- **{sector}**: {row['remote_pct']}% remote ({row['remote_jobs']:.0f}/{row['total']:.0f})")
+                else:
+                    st.info("No salary data available for energy jobs")
+
+                # Energy sources
+                st.markdown("**Top Sources for Energy Jobs**")
+                if "source" in energy_jobs.columns:
+                    energy_sources = energy_jobs["source"].value_counts()
+                    col_es1, col_es2, col_es3 = st.columns(3)
+                    for idx, (source, count) in enumerate(energy_sources.items()):
+                        col = [col_es1, col_es2, col_es3][idx % 3]
+                        with col:
+                            st.metric(source, f"{count:,} jobs")
+            else:
+                st.info("No energy jobs found in current filter. Try adjusting filters or searching for energy-related terms.")
+
+        with sector_tab3:
+            st.markdown("### 🚢 Transportation & Shipping Deep Dive")
+            col_t1, col_t2, col_t3 = st.columns(3)
+
+            # Filter for transportation-related sectors
+            transport_sectors = [s for s in filtered["sector"].unique() if any(x in s for x in ['Shipping', 'Logistics', 'Transportation'])]
+            transport_jobs = filtered[filtered["sector"].isin(transport_sectors)]
+
+            if len(transport_jobs) > 0:
+                with col_t1:
+                    st.markdown("**Transportation Breakdown**")
+                    transport_breakdown = transport_jobs["sector"].value_counts()
+                    for sector, count in transport_breakdown.items():
+                        percentage = (count / len(transport_jobs)) * 100
+                        st.markdown(f"- **{sector}**: {count:,} jobs ({percentage:.1f}%)")
+
+                with col_t2:
+                    st.markdown("**By Job Type**")
+                    transport_by_type = transport_jobs["job_category"].value_counts()
+                    for job_type, count in transport_by_type.items():
+                        percentage = (count / len(transport_jobs)) * 100
+                        st.markdown(f"- **{job_type}**: {count:,} jobs ({percentage:.1f}%)")
+
+                with col_t3:
+                    st.markdown("**By Seniority**")
+                    transport_seniority = transport_jobs["seniority_level"].value_counts()
+                    for seniority, count in transport_seniority.items():
+                        percentage = (count / len(transport_jobs)) * 100
+                        st.markdown(f"- **{seniority}**: {count:,} jobs ({percentage:.1f}%)")
+
+                st.markdown("---")
+
+                # Transportation salary analysis
+                if transport_jobs["salary_min"].notna().any():
+                    col_t4, col_t5 = st.columns(2)
+
+                    with col_t4:
+                        st.markdown("**Transportation Sectors by Salary**")
+                        transport_salary = transport_jobs[transport_jobs["salary_min"].notna()].groupby("sector").agg(
+                            median_salary=("salary_min", "median"),
+                            avg_salary=("salary_min", "mean"),
+                            count=("salary_min", "count")
+                        ).sort_values("median_salary", ascending=False)
+
+                        for sector, row in transport_salary.iterrows():
+                            st.markdown(f"- **{sector}**: ${row['median_salary']:,.0f} median (n={row['count']:.0f})")
+
+                    with col_t5:
+                        st.markdown("**Top Locations**")
+                        if "location" in transport_jobs.columns:
+                            transport_locations = transport_jobs["location"].value_counts().head(10)
+                            for location, count in transport_locations.items():
+                                st.markdown(f"- **{location}**: {count:,} jobs")
+                else:
+                    st.info("No salary data available for transportation jobs")
+
+                # Transportation sources
+                st.markdown("**Top Sources for Transportation Jobs**")
+                if "source" in transport_jobs.columns:
+                    transport_sources = transport_jobs["source"].value_counts()
+                    col_ts1, col_ts2, col_ts3 = st.columns(3)
+                    for idx, (source, count) in enumerate(transport_sources.items()):
+                        col = [col_ts1, col_ts2, col_ts3][idx % 3]
+                        with col:
+                            st.metric(source, f"{count:,} jobs")
+
+                # Maritime specific
+                maritime_jobs = transport_jobs[transport_jobs["sector"] == "Shipping & Maritime"]
+                if len(maritime_jobs) > 0:
+                    st.markdown("---")
+                    st.markdown("### ⚓ Maritime & Shipping Specifics")
+                    col_m1, col_m2 = st.columns(2)
+
+                    with col_m1:
+                        st.metric("Maritime Jobs", f"{len(maritime_jobs):,}")
+                        if "job_category" in maritime_jobs.columns:
+                            st.markdown("**Maritime by Job Type**")
+                            for job_type, count in maritime_jobs["job_category"].value_counts().items():
+                                st.markdown(f"- {job_type}: {count:,}")
+
+                    with col_m2:
+                        st.markdown("**Top Maritime Job Titles**")
+                        for title, count in maritime_jobs["title"].value_counts().head(10).items():
+                            st.markdown(f"- {title}: {count:,}")
+            else:
+                st.info("No transportation/shipping jobs found in current filter. Try adjusting filters or searching for shipping, logistics, or transportation-related terms.")
+
+        with sector_tab4:
+            st.markdown("#### 🌳 Job Hierarchy View")
+        col_d1, col_d2 = st.columns(2)
+
+        with col_d1:
+            # Sunburst: Category → Sector → Job Type
+            sunburst_data = filtered.groupby(["category", "sector", "job_category"]).size().reset_index(name="count")
+            sunburst_data = sunburst_data[sunburst_data["count"] > 0]
+
+            if not sunburst_data.empty:
+                fig_sunburst = px.sunburst(
+                    sunburst_data,
+                    path=["category", "sector", "job_category"],
+                    values="count",
+                    title="Job Distribution Hierarchy (Category → Sector → Job Type)",
+                    color="count",
+                    color_continuous_scale="RdYlGn",
+                )
+                fig_sunburst.update_layout(
+                    height=500,
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(family="Inter")
+                )
+                st.plotly_chart(fig_sunburst, use_container_width=True)
+            else:
+                st.info("Not enough data for hierarchy view")
+
+        with col_d2:
+            # Treemap: Sector → Seniority
+            treemap_data = filtered.groupby(["sector", "seniority_level"]).size().reset_index(name="count")
+            treemap_data = treemap_data[treemap_data["count"] > 0]
+
+            if not treemap_data.empty:
+                fig_treemap = px.treemap(
+                    treemap_data,
+                    path=["sector", "seniority_level"],
+                    values="count",
+                    title="Jobs by Sector & Seniority (Treemap)",
+                    color="count",
+                    color_continuous_scale="Blues",
+                )
+                fig_treemap.update_layout(
+                    height=500,
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(family="Inter")
+                )
+                st.plotly_chart(fig_treemap, use_container_width=True)
+            else:
+                st.info("Not enough data for treemap view")
+
+        st.markdown("---")
+
+        # ═════════════════ Government Standards Reference ═══════════════
+        with st.expander("ℹ️ Government Classification Standards Used"):
+            st.markdown("""
+            ### 🏛️ Industry Classification Standards Reference
+
+            This dashboard uses official US government classification systems for categorizing jobs and sectors:
+
+            #### **NAICS - North American Industry Classification System**
+            - **Agency**: US Census Bureau
+            - **Purpose**: Classify business establishments by industry
+            - **Website**: https://www.census.gov/naics/
+            - **Key Sectors Used**:
+              - NAICS 11: Agriculture, Forestry, Fishing and Hunting
+              - NAICS 21: Mining, Quarrying, and Oil and Gas Extraction
+              - NAICS 22: Utilities (Electric, Gas, Water)
+              - NAICS 23: Construction
+              - NAICS 31-33: Manufacturing
+              - NAICS 48-49: Transportation and Warehousing
+              - NAICS 51: Information (Technology)
+              - NAICS 52: Finance and Insurance
+              - NAICS 54: Professional, Scientific, and Technical Services
+              - NAICS 61: Educational Services
+              - NAICS 62: Health Care and Social Assistance
+
+            #### **SOC - Standard Occupational Classification**
+            - **Agency**: US Bureau of Labor Statistics (BLS)
+            - **Purpose**: Classify workers into occupational categories
+            - **Website**: https://www.bls.gov/soc/
+            - **Major Groups Used**:
+              - SOC 11-0000: Management Occupations
+              - SOC 13-0000: Business and Financial Operations Occupations
+              - SOC 15-0000: Computer and Mathematical Occupations
+              - SOC 17-0000: Architecture and Engineering Occupations
+              - SOC 19-0000: Life, Physical, and Social Science Occupations
+              - SOC 25-0000: Educational Instruction and Library Occupations
+              - SOC 27-0000: Arts, Design, Entertainment, Sports, and Media Occupations
+              - SOC 29-0000: Healthcare Practitioners and Technical Occupations
+              - SOC 35-0000: Food Preparation and Serving Related Occupations
+              - SOC 37-0000: Building and Grounds Cleaning and Maintenance
+              - SOC 39-0000: Personal Care and Service Occupations
+              - SOC 41-0000: Sales and Related Occupations
+              - SOC 43-0000: Office and Administrative Support Occupations
+              - SOC 47-0000: Construction and Extraction Occupations
+              - SOC 49-0000: Installation, Maintenance, and Repair Occupations
+              - SOC 51-0000: Production Occupations
+              - SOC 53-0000: Transportation and Material Moving Occupations
+
+            #### **EEOC Job Categories**
+            - **Agency**: Equal Employment Opportunity Commission
+            - **Purpose**: Track employment patterns by job category
+            - **Website**: https://www.eeoc.gov/statistics/employment/jobpatterns
+            - **Categories Used**:
+              - Officials and Managers
+              - Professionals
+              - Technicians
+              - Sales Workers
+              - Administrative Support Workers
+              - Craft Workers
+              - Operatives
+              - Laborers
+              - Service Workers
+
+            #### **Energy Sector References**
+            - **US Department of Energy**: Annual Energy Employment Reports
+            - **Bureau of Labor Statistics**: Green Goods and Services Occupations
+            - **International Renewable Energy Agency (IRENA)**: Renewable Energy Jobs
+
+            #### **Transportation & Shipping References**
+            - **Bureau of Transportation Statistics (BTS)**: Transportation Statistics
+            - **Maritime Administration (MARAD)**: Maritime Industry Data
+            - **Federal Motor Carrier Safety Administration (FMCSA)**: Trucking Industry
+
+            #### **How Sectors are Mapped**:
+            - **Energy**: Split into Oil & Gas, Renewables, Nuclear, Utilities, and Cleantech
+              - Aligns with NAICS 211 (Oil & Gas), 2211 (Electric Power), 2212 (Gas)
+              - Matches DOE's energy employment categories
+            - **Shipping & Maritime**: Based on NAICS 483 (Water Transportation)
+              - Includes ports, vessels, cargo shipping, maritime operations
+            - **Transportation**: Ground (NAICS 484), Aviation (NAICS 481), Rail (NAICS 482)
+            - **Manufacturing**: NAICS 31-33, split by sub-sector
+            - **IT & Software**: NAICS 5112 (Software), 5415 (Computer Systems Design)
+            - **Healthcare**: NAICS 62, split by clinical roles
+            - **Defense**: NAICS 332, 336 (Defense Manufacturing)
+            """)
 
     # ═══════════════ TAB 2: Job Listings ═══════════════
     with tab2:
