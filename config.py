@@ -27,29 +27,23 @@ TRACKED_COMPANIES_PATH = PROJECT_ROOT / "data" / "tracked_companies.json"
 
 TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL", "")
 TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN", "")
-USE_TURSO = bool(TURSO_DATABASE_URL and TURSO_AUTH_TOKEN)
 
 def get_database():
-    """Factory to get the right database instance based on config."""
+    """Factory to get Turso Cloud database instance (Turso is required)."""
+    if not TURSO_DATABASE_URL or not TURSO_AUTH_TOKEN:
+        raise ValueError(
+            "Turso Cloud database credentials are required. "
+            "Please set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN environment variables."
+        )
+
     try:
-        if USE_TURSO:
-            try:
-                from models.turso_database import TursoDatabase
-                return TursoDatabase(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
-            except ImportError:
-                if logger:
-                    logger.warning("libsql-experimental not installed, falling back to SQLite")
-                from models.database import JobDatabase
-                return JobDatabase(DB_PATH)
-        else:
-            from models.database import JobDatabase
-            return JobDatabase(DB_PATH)
-    except Exception as e:
-        # Fallback to SQLite if anything goes wrong
-        if logger:
-            logger.error(f"Error getting database: {e}, falling back to SQLite")
-        from models.database import JobDatabase
-        return JobDatabase(DB_PATH)
+        from models.turso_database import TursoDatabase
+        return TursoDatabase(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
+    except ImportError as e:
+        raise ImportError(
+            "libsql-experimental is required for Turso Cloud database. "
+            "Install it with: pip install libsql-experimental"
+        ) from e
 
 # ─── API Endpoints ──────────────────────────────────────────
 USAJOBS_BASE_URL = "https://data.usajobs.gov/api/Search"

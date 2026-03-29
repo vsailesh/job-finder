@@ -6,7 +6,7 @@ A multi-source, automated job-finding agent that searches **federal, state, and 
 
 - **19 job sources** — Federal, corporate aggregators, tech startups, healthcare, defense, and more
 - **11 search categories** — Science, Tech, Defense, Finance, Healthcare, and more
-- **Turso Cloud or SQLite** — Cloud sync with automatic fallback to local database
+- **Turso Cloud** — Cloud database for scalable job storage
 - **Profile system** — Create applicant profiles with skills, preferences, and resumes
 - **Smart matching** — Weighted scoring across skills, title similarity, salary, location, and clearance
 - **Fuzzy deduplication** — Automatic duplicate detection across sources using RapidFuzz
@@ -77,9 +77,9 @@ cp .env.example .env
 - **Adzuna**: [developer.adzuna.com](https://developer.adzuna.com/)
 - **ScraperAPI** (optional, for Indeed): [scraperapi.com](https://www.scraperapi.com/)
 - **Remotive, Arbeitnow, JoinRise, LinkedIn, Glassdoor, Monster, RemoteOK, Careers, Dice**: No key needed ✓
-- **Turso** (optional, for cloud database): [turso.tech](https://turso.tech/)
+- **Turso** (required, for cloud database): [turso.tech](https://turso.tech/)
 
-> **Note**: The agent works with any subset of keys — unconfigured sources are gracefully skipped.
+> **Note**: Turso Cloud database is required. Job sources work with any subset of keys — unconfigured sources are gracefully skipped.
 
 ### 3. Run the Agent
 
@@ -212,13 +212,12 @@ job-finder-agent/
 │   └── state_government_agent.py # MD/VA/DC government jobs (NEW)
 ├── models/
 │   ├── job.py               # Job dataclass
-│   ├── database.py          # Async SQLite with fuzzy dedup
-│   ├── turso_database.py    # Turso cloud database
+│   ├── database.py          # Database interface with fuzzy dedup
+│   ├── turso_database.py    # Turso cloud database implementation
 │   └── profile.py           # Applicant profile model with smart matching
 ├── dashboard/
 │   └── app.py               # Streamlit dashboard
 ├── data/
-│   ├── jobs.db              # SQLite database (auto-created)
 │   ├── job_finder.log       # Log file
 │   ├── resumes/             # Resume PDFs for applications
 │   └── tracked_companies.json  # 100+ Fortune 500, FAANG+, healthcare, defense
