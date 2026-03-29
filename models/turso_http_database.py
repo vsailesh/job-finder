@@ -271,6 +271,10 @@ class TursoHTTPDatabase:
 
         return [dict(zip(columns, row)) for row in rows]
 
+    async def get_jobs(self, source=None, category=None, job_type=None, hours=24, search=None, limit=500, offset=0) -> List[Dict[str, Any]]:
+        """Async version - delegates to sync since HTTP client is sync-safe."""
+        return self.get_jobs_sync(hours=hours, limit=limit)
+
     def get_stats_sync(self, hours: int = 0) -> Dict[str, Any]:
         """Get stats (synchronous for Streamlit)."""
         conditions = []
@@ -321,6 +325,47 @@ class TursoHTTPDatabase:
             "by_type": by_type,
             "recent_runs": runs,
         }
+
+    async def get_stats(self, hours: int = 24) -> Dict[str, Any]:
+        """Async version - delegates to sync."""
+        return self.get_stats_sync(hours=hours)
+
+    async def start_run(self) -> int:
+        """Record the start of a search run."""
+        self._execute_sync(
+            "INSERT INTO search_runs (started_at) VALUES (?)",
+            (datetime.utcnow().isoformat(),)
+        )
+        last_id = self._execute_sync("SELECT last_insert_rowid()")
+        return last_id[0][0] if last_id else 0
+
+    async def complete_run(self, run_id: int, total: int, new: int, dupes: int, errors: int, sources: str):
+        """Record the completion of a search run."""
+        self._execute_sync(
+            "UPDATE search_runs SET completed_at=?, total_found=?, new_jobs=?, duplicates_skipped=?, errors=?, sources_searched=?, status='completed' WHERE id=?",
+            (datetime.utcnow().isoformat(), total, new, dupes, errors, sources, run_id)
+        )
+
+    async def clean_old_jobs(self, days: int = 7) -> int:
+        """Remove jobs older than specified days."""
+        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        # Count before delete
+        count_rows = self._execute_sync(
+            "SELECT COUNT(*) FROM jobs WHERE datetime(posted_date) <= datetime(?)",
+            (cutoff,)
+        )
+        count = count_rows[0][0] if count_rows else 0
+        if count > 0:
+            self._execute_sync(
+                "DELETE FROM jobs WHERE datetime(posted_date) <= datetime(?)",
+                (cutoff,)
+            )
+            logger.info(f"Cleaned up {count} jobs older than {days} days from Turso")
+        return count
+
+    async def vacuum(self):
+        """Turso manages storage itself, vacuum is a no-op."""
+        logger.info("Turso Cloud manages storage automatically - no vacuum needed.")
 
     def queue_application(self, job_id: int, job_hash: str, profile_name: str, cover_letter: str = "") -> int:
         """Queue a job for auto-apply."""
@@ -394,9 +439,33 @@ class TursoHTTPDatabase:
 
     def init_sync(self):
         """Synchronous initialization."""
-        # Use async version in sync context
         import asyncio
-        asyncio.run(self.initialize())
+        try:
+            loop = asyncio.get_running_loop()
+            # Already inside an event loop (e.g. Streamlit) - use sync methods directly
+            self._init_tables_sync()
+        except RuntimeError:
+            # No event loop running - safe to use asyncio.run
+            asyncio.run(self.initialize())
+
+    def _init_tables_sync(self):
+        """Create tables using synchronous HTTP calls."""
+        statements = [
+            "CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, unique_hash TEXT UNIQUE NOT NULL, title TEXT NOT NULL, company TEXT NOT NULL, location TEXT NOT NULL, url TEXT NOT NULL, source TEXT NOT NULL, category TEXT NOT NULL, posted_date TEXT NOT NULL, description TEXT DEFAULT '', salary_min REAL, salary_max REAL, job_type TEXT DEFAULT 'corporate', employment_type TEXT DEFAULT '', seniority TEXT DEFAULT '', remote INTEGER DEFAULT 0, search_keyword TEXT DEFAULT '', fetched_at TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now')))",
+            "CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, job_hash TEXT NOT NULL, profile_name TEXT NOT NULL, status TEXT DEFAULT 'queued', applied_at TEXT, cover_letter TEXT DEFAULT '', notes TEXT DEFAULT '', error_message TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (job_id) REFERENCES jobs(id))",
+            "CREATE TABLE IF NOT EXISTS search_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, started_at TEXT NOT NULL, completed_at TEXT, total_found INTEGER DEFAULT 0, new_jobs INTEGER DEFAULT 0, duplicates_skipped INTEGER DEFAULT 0, errors INTEGER DEFAULT 0, sources_searched TEXT DEFAULT '', status TEXT DEFAULT 'running')",
+            "CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source)",
+            "CREATE INDEX IF NOT EXISTS idx_jobs_category ON jobs(category)",
+            "CREATE INDEX IF NOT EXISTS idx_jobs_job_type ON jobs(job_type)",
+            "CREATE INDEX IF NOT EXISTS idx_jobs_posted_date ON jobs(posted_date)",
+            "CREATE INDEX IF NOT EXISTS idx_jobs_unique_hash ON jobs(unique_hash)",
+            "CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications(job_id)",
+            "CREATE INDEX IF NOT EXISTS idx_applications_profile ON applications(profile_name)",
+            "CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)",
+        ]
+        for stmt in statements:
+            self._execute_sync(stmt)
+        logger.info(f"Turso HTTP database initialized (sync) at {self.db_url}")
 
     def vacuum_sync(self):
         """Vacuum is not supported via HTTP API."""
