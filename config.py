@@ -48,13 +48,42 @@ TRACKED_COMPANIES_PATH = PROJECT_ROOT / "data" / "tracked_companies.json"
 def get_database():
     """Factory to get Turso Cloud database instance (Turso is required)."""
     # Read at call time so Streamlit secrets are available (not at import time)
-    turso_url = _get_config("TURSO_DATABASE_URL")
-    turso_token = _get_config("TURSO_AUTH_TOKEN")
+    turso_url = os.getenv("TURSO_DATABASE_URL", "")
+    turso_token = os.getenv("TURSO_AUTH_TOKEN", "")
+    
+    # Fallback: try Streamlit secrets directly
+    if not turso_url or not turso_token:
+        try:
+            import streamlit as st
+            turso_url = turso_url or str(st.secrets.get("TURSO_DATABASE_URL", ""))
+            turso_token = turso_token or str(st.secrets.get("TURSO_AUTH_TOKEN", ""))
+        except Exception:
+            pass
+    
+    # Fallback 2: try bracket access on st.secrets
+    if not turso_url or not turso_token:
+        try:
+            import streamlit as st
+            if not turso_url:
+                turso_url = str(st.secrets["TURSO_DATABASE_URL"])
+            if not turso_token:
+                turso_token = str(st.secrets["TURSO_AUTH_TOKEN"])
+        except Exception:
+            pass
     
     if not turso_url or not turso_token:
+        # Collect debug info to help diagnose
+        available_keys = []
+        try:
+            import streamlit as st
+            available_keys = list(st.secrets.keys()) if hasattr(st.secrets, 'keys') else []
+        except Exception:
+            pass
         raise ValueError(
-            "Turso Cloud database credentials are required. "
-            "Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in .env file or Streamlit secrets."
+            f"Turso Cloud database credentials are required. "
+            f"Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in .env file or Streamlit secrets. "
+            f"Found url={'yes' if turso_url else 'no'}, token={'yes' if turso_token else 'no'}. "
+            f"Available secret keys: {available_keys}"
         )
 
     # Use HTTP-based Turso client (works on Streamlit Cloud without compilation)
