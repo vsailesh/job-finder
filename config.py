@@ -3,8 +3,11 @@ Central configuration for Job Finding Agent.
 Loads API keys from .env and defines search categories/keywords.
 """
 import os
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # Load .env from project root
 PROJECT_ROOT = Path(__file__).parent
@@ -21,6 +24,24 @@ SCRAPERAPI_KEY = os.getenv("SCRAPERAPI_KEY", "")
 # ─── Database ───────────────────────────────────────────────
 DB_PATH = PROJECT_ROOT / "data" / "jobs.db"
 TRACKED_COMPANIES_PATH = PROJECT_ROOT / "data" / "tracked_companies.json"
+
+TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL", "")
+TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN", "")
+USE_TURSO = bool(TURSO_DATABASE_URL and TURSO_AUTH_TOKEN)
+
+def get_database():
+    """Factory to get the right database instance based on config."""
+    if USE_TURSO:
+        try:
+            from models.turso_database import TursoDatabase
+            return TursoDatabase(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
+        except ImportError:
+            logger.warning("libsql-experimental not installed, falling back to SQLite")
+            from models.database import JobDatabase
+            return JobDatabase(DB_PATH)
+    else:
+        from models.database import JobDatabase
+        return JobDatabase(DB_PATH)
 
 # ─── API Endpoints ──────────────────────────────────────────
 USAJOBS_BASE_URL = "https://data.usajobs.gov/api/Search"
@@ -178,3 +199,52 @@ REQUEST_TIMEOUT = 30  # seconds
 MAX_RETRIES = 3
 RETRY_DELAY = 2  # seconds
 CONCURRENT_REQUESTS = 5  # max concurrent API calls per agent
+
+# ─── Source Configuration ─────────────────────────────────────
+# Config-driven architecture: enable/disable sources dynamically
+ENABLED_SOURCES = {
+    # Original sources
+    "usajobs": True,
+    "jsearch": True,
+    "remotive": True,
+    "adzuna": True,
+    "arbeitnow": True,
+    "joinrise": True,
+    "indeed": True,
+    "linkedin": True,
+    "glassdoor": True,
+    "monster": True,
+    "remoteok": True,
+    "careers": True,
+    "dice": True,
+    # New sources (added in v2.0)
+    "ziprecruiter": True,
+    "yc_jobs": True,
+    "otta": True,
+    "clearancejobs": True,
+    "health_ecareers": True,
+    "state_government": True,
+}
+
+# ─── Additional API Endpoints ────────────────────────────────
+ZIPRECRUITER_BASE_URL = "https://api.ziprecruiter.com/jobs-app/version"
+ZIPRECRUITER_API_KEY = os.getenv("ZIPRECRUITER_API_KEY", "")
+
+YC_JOBS_BASE_URL = "https://www.workatastartup.com/api/jobs"
+OTTA_BASE_URL = "https://www.otta.com/api/v0/jobs"
+CLEARANCEJOBS_BASE_URL = "https://www.clearancejobs.com/api/jobs"
+HEALTH_ECAREERS_BASE_URL = "https://www.healthecareers.com/api/jobs"
+
+# ─── Deduplication Settings ───────────────────────────────────
+FUZZY_MATCH_THRESHOLD = 85  # Similarity threshold for fuzzy matching (0-100)
+ENABLE_FUZZY_DEDUP = True  # Enable fuzzy deduplication across sources
+
+# ─── Matching Settings ────────────────────────────────────────
+MATCHING_WEIGHTS = {
+    "skills": 0.35,      # Skills overlap
+    "title": 0.25,       # Title similarity
+    "salary": 0.15,      # Salary match
+    "category": 0.10,    # Category match
+    "location": 0.10,    # Location preference
+    "clearance": 0.05,   # Security clearance match
+}

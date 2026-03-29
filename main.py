@@ -43,6 +43,13 @@ from agents.monster_agent import MonsterAgent
 from agents.remoteok_agent import RemoteOKAgent
 from agents.careers_agent import CareersAgent
 from agents.dice_agent import DiceAgent
+# New agents (v2.0)
+from agents.ziprecruiter_agent import ZipRecruiterAgent
+from agents.yc_jobs_agent import YCJobsAgent
+from agents.otta_agent import OttaAgent
+from agents.clearancejobs_agent import ClearanceJobsAgent
+from agents.health_ecareers_agent import HealthECareersAgent
+from agents.state_government_agent import StateGovernmentAgent
 
 console = Console()
 
@@ -58,22 +65,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger("job_finder")
 
-# Map agent names to classes
-AGENT_MAP = {
-    "usajobs": USAJobsAgent,
-    "jsearch": JSearchAgent,
-    "remotive": RemotiveAgent,
-    "adzuna": AdzunaAgent,
-    "arbeitnow": ArbeitnowAgent,
-    "joinrise": JoinRiseAgent,
-    "indeed": IndeedScraperAgent,
-    "linkedin": LinkedInAgent,
-    "glassdoor": GlassdoorAgent,
-    "monster": MonsterAgent,
-    "remoteok": RemoteOKAgent,
-    "careers": CareersAgent,
-    "dice": DiceAgent,
+# Map agent names to classes (all available agents)
+ALL_AGENTS = {
+    "usajobs": (USAJobsAgent, "Federal government jobs"),
+    "jsearch": (JSearchAgent, "LinkedIn, Indeed, Glassdoor, ZipRecruiter"),
+    "remotive": (RemotiveAgent, "Remote tech jobs (no key needed)"),
+    "adzuna": (AdzunaAgent, "Global job aggregator"),
+    "arbeitnow": (ArbeitnowAgent, "Global tech & remote jobs (no key needed)"),
+    "joinrise": (JoinRiseAgent, "Multi-industry jobs (no key needed)"),
+    "indeed": (IndeedScraperAgent, "Indeed job scraper (no key needed)"),
+    "linkedin": (LinkedInAgent, "LinkedIn public jobs (no key needed)"),
+    "glassdoor": (GlassdoorAgent, "Glassdoor job scraper (no key needed)"),
+    "monster": (MonsterAgent, "Monster job scraper (no key needed)"),
+    "remoteok": (RemoteOKAgent, "RemoteOK remote jobs (no key needed)"),
+    "careers": (CareersAgent, "Company career pages (no key needed)"),
+    "dice": (DiceAgent, "Dice tech jobs (no key needed)"),
+    # New agents (v2.0)
+    "ziprecruiter": (ZipRecruiterAgent, "ZipRecruiter API"),
+    "yc_jobs": (YCJobsAgent, "YC-backed startup jobs (no key needed)"),
+    "otta": (OttaAgent, "Tech startup jobs (no key needed)"),
+    "clearancejobs": (ClearanceJobsAgent, "Defense/clearance jobs (no key needed)"),
+    "health_ecareers": (HealthECareersAgent, "Healthcare jobs (no key needed)"),
+    "state_government": (StateGovernmentAgent, "MD/VA/DC government jobs (no key needed)"),
 }
+
+# Build AGENT_MAP based on config.ENABLED_SOURCES
+AGENT_MAP = {
+    name: agent_class
+    for name, (agent_class, _) in ALL_AGENTS.items()
+    if config.ENABLED_SOURCES.get(name, False)
+}
+
+logger.info(f"Loaded {len(AGENT_MAP)} enabled sources: {', '.join(AGENT_MAP.keys())}")
 
 
 def print_banner():
@@ -89,45 +112,29 @@ def print_banner():
 
 
 def print_config_status():
-    """Print which agents are configured."""
+    """Print which agents are configured and enabled."""
     table = Table(title="Agent Configuration", box=box.ROUNDED)
     table.add_column("Source", style="cyan")
     table.add_column("Status", justify="center")
     table.add_column("Coverage")
-    
-    agents_info = [
-        ("USAJobs", bool(config.USAJOBS_API_KEY and config.USAJOBS_EMAIL),
-         "Federal government jobs"),
-        ("JSearch", bool(config.RAPIDAPI_KEY),
-         "LinkedIn, Indeed, Glassdoor, ZipRecruiter"),
-        ("Remotive", True,
-         "Remote tech jobs (no key needed)"),
-        ("Adzuna", bool(config.ADZUNA_APP_ID and config.ADZUNA_APP_KEY),
-         "Global job aggregator"),
-        ("Arbeitnow", True,
-         "Global tech & remote jobs (no key needed)"),
-        ("JoinRise", True,
-         "Multi-industry jobs (no key needed)"),
-        ("Indeed", True,
-         "Indeed job scraper (no key needed)"),
-        ("LinkedIn", True,
-         "LinkedIn public jobs (no key needed)"),
-        ("Glassdoor", True,
-         "Glassdoor job scraper (no key needed)"),
-        ("Monster", True,
-         "Monster job scraper (no key needed)"),
-        ("RemoteOK", True,
-         "RemoteOK remote jobs (no key needed)"),
-        ("Careers", True,
-         "Company career pages — Greenhouse, Lever, Ashby (no key needed)"),
-        ("Dice", True,
-         "Dice tech jobs scraper (no key needed)"),
-    ]
-    
-    for name, configured, coverage in agents_info:
-        status = "[green]✓ Ready[/green]" if configured else "[yellow]⚠ No API key[/yellow]"
-        table.add_row(name, status, coverage)
-    
+
+    for name, (agent_class, coverage) in ALL_AGENTS.items():
+        # Check if enabled
+        enabled = config.ENABLED_SOURCES.get(name, False)
+
+        if not enabled:
+            status = "[dim]✗ Disabled[/dim]"
+        else:
+            # Check if configured (has required API keys)
+            agent = agent_class()
+            configured = agent.is_configured()
+            if configured:
+                status = "[green]✓ Ready[/green]"
+            else:
+                status = "[yellow]⚠ No API key[/yellow]"
+
+        table.add_row(name.replace("_", " ").title(), status, coverage)
+
     console.print(table)
     console.print()
 
@@ -177,7 +184,7 @@ async def run_once(sources: List[str] = None):
     print_banner()
     print_config_status()
     
-    db = JobDatabase(config.DB_PATH)
+    db = config.get_database()
     await db.initialize()
     
     run_id = await db.start_run()
@@ -271,10 +278,13 @@ async def run_once(sources: List[str] = None):
         console.print(f"\n  🧹 [bold yellow]GitHub Actions detected[/bold yellow] - cleaning jobs older than 7 days...")
         deleted_count = await db.clean_old_jobs(days=7)
         console.print(f"  🗑️  Removed [red]{deleted_count}[/red] old jobs to keep cloud DB lightweight")
+        
+        # Run vacuum to reclaim disk space (meaningful for local SQLite)
+        if hasattr(db, "vacuum"):
+            await db.vacuum()
     
-    console.print(
-        f"\n  💾 Database: [bold]{config.DB_PATH}[/bold]"
-    )
+    db_type = "Turso Cloud ☁️" if config.USE_TURSO else f"Local SQLite 💾 ({config.DB_PATH})"
+    console.print(f"\n  💾 Database: [bold]{db_type}[/bold]")
     console.print(
         f"  🌐 Dashboard: Run [bold cyan]python main.py --dashboard[/bold cyan] to view results"
     )

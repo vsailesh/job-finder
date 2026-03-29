@@ -80,41 +80,209 @@ Best regards,
 {self.phone}"""
 
     def matches_job(self, job_dict: dict) -> float:
-        """Score how well this profile matches a job (0.0 - 1.0)."""
+        """
+        Score how well this profile matches a job (0.0 - 1.0).
+
+        Enhanced with weighted scoring across multiple factors:
+        - Skills overlap (weighted most heavily)
+        - Title similarity (using fuzzy matching)
+        - Salary match
+        - Category match
+        - Location preference
+        - Security clearance match
+        """
+        import config
+
         score = 0.0
-        total_factors = 0
+        weights = config.MATCHING_WEIGHTS
 
-        # Category match
-        if self.preferred_categories:
-            total_factors += 1
-            if job_dict.get("category") in self.preferred_categories:
-                score += 1.0
-
-        # Job type match
-        if self.preferred_job_types:
-            total_factors += 1
-            if job_dict.get("job_type") in self.preferred_job_types:
-                score += 1.0
-
-        # Salary match
-        if self.target_salary_min and job_dict.get("salary_min"):
-            total_factors += 1
-            if job_dict["salary_min"] >= self.target_salary_min:
-                score += 1.0
-            elif job_dict["salary_min"] >= self.target_salary_min * 0.8:
-                score += 0.5
-
-        # Skills overlap (fuzzy)
+        # 1. Skills match (highest weight)
         if self.skills:
-            total_factors += 1
-            title = job_dict.get("title", "").lower()
-            desc = job_dict.get("description", "").lower()
-            combined = f"{title} {desc}"
-            matches = sum(1 for s in self.skills if s.lower() in combined)
-            if matches > 0:
-                score += min(matches / max(len(self.skills), 1), 1.0)
+            skills_score = self._score_skills(job_dict)
+            score += skills_score * weights.get("skills", 0.35)
 
-        return score / max(total_factors, 1)
+        # 2. Title similarity
+        title_score = self._score_title_similarity(job_dict)
+        score += title_score * weights.get("title", 0.25)
+
+        # 3. Salary match
+        salary_score = self._score_salary(job_dict)
+        score += salary_score * weights.get("salary", 0.15)
+
+        # 4. Category match
+        if self.preferred_categories:
+            if job_dict.get("category") in self.preferred_categories:
+                score += 1.0 * weights.get("category", 0.10)
+
+        # 5. Location preference
+        location_score = self._score_location(job_dict)
+        score += location_score * weights.get("location", 0.10)
+
+        # 6. Security clearance match
+        if self.security_clearance and self.security_clearance != "none":
+            clearance_score = self._score_clearance(job_dict)
+            score += clearance_score * weights.get("clearance", 0.05)
+
+        return min(score, 1.0)
+
+    def _score_skills(self, job_dict: dict) -> float:
+        """
+        Score skills overlap using fuzzy matching.
+
+        Returns a score from 0.0 to 1.0 based on how many skills match.
+        """
+        if not self.skills:
+            return 0.0
+
+        title = job_dict.get("title", "").lower()
+        desc = job_dict.get("description", "").lower()
+        combined = f"{title} {desc}"
+
+        matches = 0
+        for skill in self.skills:
+            skill_lower = skill.lower()
+            # Exact match
+            if skill_lower in combined:
+                matches += 1
+            else:
+                # Try fuzzy matching if rapidfuzz is available
+                try:
+                    from rapidfuzz import fuzz
+                    # Check for partial matches in the combined text
+                    words = combined.split()
+                    for word in words:
+                        if fuzz.ratio(skill_lower, word) >= 85:
+                            matches += 0.5
+                            break
+                except ImportError:
+                    pass
+
+        return min(matches / len(self.skills), 1.0)
+
+    def _score_title_similarity(self, job_dict: dict) -> float:
+        """
+        Score title similarity using fuzzy matching.
+
+        Compares the job title with the user's skills and experience level.
+        """
+        job_title = job_dict.get("title", "").lower()
+
+        # Check for seniority match
+        seniority_score = 1.0
+        if self.years_experience >= 5 and not any(
+            w in job_title for w in ["senior", "sr.", "lead", "principal", "staff", "manager"]
+        ):
+            seniority_score = 0.7  # Slight penalty for senior person on junior role
+        elif self.years_experience < 3 and any(
+            w in job_title for w in ["senior", "sr.", "lead", "principal", "director", "vp"]
+        ):
+            seniority_score = 0.5  # Penalty for junior person on senior role
+
+        # Check for skill keywords in title
+        title_skill_match = 0.0
+        for skill in self.skills[:5]:  # Check top 5 skills
+            if skill.lower() in job_title:
+                title_skill_match += 0.2
+
+        return min(seniority_score * (0.5 + title_skill_match), 1.0)
+
+    def _score_salary(self, job_dict: dict) -> float:
+        """
+        Score salary match.
+
+        Returns 1.0 if salary meets or exceeds target, partial score otherwise.
+        """
+        if not self.target_salary_min:
+            return 1.0  # No preference, full score
+
+        job_salary = job_dict.get("salary_min") or job_dict.get("salary_max")
+
+        if not job_salary:
+            return 0.5  # Salary unknown, neutral score
+
+        if job_salary >= self.target_salary_min:
+            return 1.0  # Meets or exceeds target
+
+        # Partial score if close (within 20%)
+        ratio = job_salary / self.target_salary_min
+        if ratio >= 0.8:
+            return 0.7
+        elif ratio >= 0.6:
+            return 0.4
+        else:
+            return 0.1
+
+    def _score_location(self, job_dict: dict) -> float:
+        """
+        Score location match.
+
+        Returns 1.0 for remote if preferred, or score based on location preference.
+        """
+        job_location = job_dict.get("location", "").lower()
+        is_remote = job_dict.get("remote", False) or "remote" in job_location
+
+        # If user prefers remote
+        if self.location_preference and "remote" in self.location_preference.lower():
+            if is_remote:
+                return 1.0
+            elif self.willing_to_relocate:
+                return 0.6  # Willing to relocate, but prefers remote
+            else:
+                return 0.2
+
+        # If user has specific location preference
+        if self.location_preference and not is_remote:
+            if self.location_preference.lower() in job_location:
+                return 1.0
+            elif self.willing_to_relocate:
+                return 0.5
+            else:
+                return 0.1
+
+        # No strong preference
+        return 0.7
+
+    def _score_clearance(self, job_dict: dict) -> float:
+        """
+        Score security clearance match.
+
+        Returns 1.0 if user's clearance meets or exceeds job requirements.
+        """
+        desc = job_dict.get("description", "").lower()
+        title = job_dict.get("title", "").lower()
+        combined = f"{title} {desc}"
+
+        # Check if job requires clearance
+        clearance_levels = {
+            "sci": 4,
+            "top_secret": 3,
+            "secret": 2,
+            "confidential": 1,
+            "none": 0,
+        }
+
+        user_level = clearance_levels.get(self.security_clearance.lower(), 0)
+
+        # Determine required clearance level from job
+        required_level = 0
+        if "sci" in combined or "sensitive compartmented information" in combined:
+            required_level = 4
+        elif "top secret" in combined or "ts/" in combined or "ts clearance" in combined:
+            required_level = 3
+        elif "secret" in combined and "top secret" not in combined:
+            required_level = 2
+        elif "confidential" in combined:
+            required_level = 1
+
+        # If no clearance required, full score
+        if required_level == 0:
+            return 1.0
+
+        # If user meets or exceeds required level
+        if user_level >= required_level:
+            return 1.0
+        else:
+            return 0.0  # Doesn't meet clearance requirement
 
     @classmethod
     def load(cls, name: str) -> Optional["Profile"]:

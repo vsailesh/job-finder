@@ -18,7 +18,6 @@ import json
 from datetime import datetime, timedelta
 
 import config
-from models.database import JobDatabase
 from models.profile import Profile
 
 # ─── Page Config ────────────────────────────────────────────
@@ -30,8 +29,8 @@ st.set_page_config(
 )
 
 # Initialize DB (creates applications table if not exists)
-db = JobDatabase(config.DB_PATH)
-if config.DB_PATH.exists():
+db = config.get_database()
+if config.USE_TURSO or config.DB_PATH.exists():
     db.init_sync()
 
 # ─── Custom CSS ─────────────────────────────────────────────

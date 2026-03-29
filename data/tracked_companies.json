@@ -183,5 +183,405 @@
     "name": "Amazon",
     "slug": "amazon",
     "platform": "greenhouse"
+  },
+  {
+    "name": "Google",
+    "slug": "google",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Meta",
+    "slug": "meta",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Apple",
+    "slug": "apple",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Microsoft",
+    "slug": "microsoft",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Netflix",
+    "slug": "netflix",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Snowflake",
+    "slug": "snowflake",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Shopify",
+    "slug": "shopify",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Square",
+    "slug": "square",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Twitter/X",
+    "slug": "x",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Uber",
+    "slug": "uber",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Slack",
+    "slug": "slack",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Zoom",
+    "slug": "zoom",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Salesforce",
+    "slug": "salesforce",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Adobe",
+    "slug": "adobe",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Oracle",
+    "slug": "oracle",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Cisco",
+    "slug": "cisco",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Intel",
+    "slug": "intel",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "AMD",
+    "slug": "amd",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "NVIDIA",
+    "slug": "nvidia",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Qualcomm",
+    "slug": "qualcomm",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "IBM",
+    "slug": "ibm",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Red Hat",
+    "slug": "redhat",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "VMware",
+    "slug": "vmware",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "ServiceNow",
+    "slug": "servicenow",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Palantir",
+    "slug": "palantir",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Lockheed Martin",
+    "slug": "lockheedmartin",
+    "platform": "workday"
+  },
+  {
+    "name": "Booz Allen Hamilton",
+    "slug": "boozallen",
+    "platform": "workday"
+  },
+  {
+    "name": "Northrop Grumman",
+    "slug": "northropgrumman",
+    "platform": "workday"
+  },
+  {
+    "name": "Raytheon",
+    "slug": "raytheon",
+    "platform": "workday"
+  },
+  {
+    "name": "General Dynamics",
+    "slug": "generaldynamics",
+    "platform": "workday"
+  },
+  {
+    "name": "CACI",
+    "slug": "caci",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "SAIC",
+    "slug": "saic",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Leidos",
+    "slug": "leidos",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "ManTech",
+    "slug": "mantech",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "BAE Systems",
+    "slug": "baesystems",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "L3Harris",
+    "slug": "l3harris",
+    "platform": "workday"
+  },
+  {
+    "name": "Huntington Ingalls",
+    "slug": "huntingtoningalls",
+    "platform": "workday"
+  },
+  {
+    "name": "Johns Hopkins Medicine",
+    "slug": "hopkinsmedicine",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Mayo Clinic",
+    "slug": "mayoclinic",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Cleveland Clinic",
+    "slug": "clevelandclinic",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Kaiser Permanente",
+    "slug": "kaiserpermanente",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "HCA Healthcare",
+    "slug": "hcahealthcare",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Ascension",
+    "slug": "ascension",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Providence",
+    "slug": "providence",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "CommonSpirit Health",
+    "slug": "commonspirit",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "UPMC",
+    "slug": "upmc",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "NYU Langone",
+    "slug": "nyulangone",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Stanford Health Care",
+    "slug": "stanfordhealthcare",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Memorial Sloan Kettering",
+    "slug": "mskcc",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Mass General Brigham",
+    "slug": "massgeneralbrigham",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "JPMorgan Chase",
+    "slug": "jpmorganchase",
+    "platform": "workday"
+  },
+  {
+    "name": "Goldman Sachs",
+    "slug": "goldmansachs",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Morgan Stanley",
+    "slug": "morganstanley",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Bank of America",
+    "slug": "bankofamerica",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Wells Fargo",
+    "slug": "wellsfargo",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Citigroup",
+    "slug": "citi",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Visa",
+    "slug": "visa",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "PayPal",
+    "slug": "paypal",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Intuit",
+    "slug": "intuit",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Fidelity",
+    "slug": "fidelity",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Charles Schwab",
+    "slug": "schwab",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Robinhood",
+    "slug": "robinhood",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "eBay",
+    "slug": "ebay",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Square",
+    "slug": "square",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Plaid",
+    "slug": "plaid",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Chime",
+    "slug": "chime",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Stripe",
+    "slug": "stripe",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Anthropic",
+    "slug": "anthropic",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "DeepMind",
+    "slug": "deepmind",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Scale AI",
+    "slug": "scaleai",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Hugging Face",
+    "slug": "huggingface",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Character.AI",
+    "slug": "characterai",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Adept AI",
+    "slug": "adeptai",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Inflection",
+    "slug": "inflection",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Cohere",
+    "slug": "cohere",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Stability AI",
+    "slug": "stabilityai",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "Mistral AI",
+    "slug": "mistralai",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "EleutherAI",
+    "slug": "eleutherai",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "BigScience",
+    "slug": "bigscience",
+    "platform": "greenhouse"
+  },
+  {
+    "name": "LAION",
+    "slug": "laion",
+    "platform": "greenhouse"
   }
 ]

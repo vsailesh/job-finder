@@ -1,16 +1,26 @@
 """
 Async SQLite database manager for storing and querying job postings.
+Enhanced with fuzzy deduplication across sources.
 """
 import aiosqlite
 import sqlite3
 import logging
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 
 from models.job import Job
+import config
 
 logger = logging.getLogger(__name__)
+
+# Try to import rapidfuzz for fuzzy matching
+try:
+    from rapidfuzz import fuzz, process
+    FUZZY_AVAILABLE = True
+except ImportError:
+    logger.warning("rapidfuzz not installed - fuzzy deduplication disabled")
+    FUZZY_AVAILABLE = False
 
 CREATE_JOBS_TABLE = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -106,12 +116,14 @@ class JobDatabase:
         """
         inserted = 0
         skipped = 0
-        
+        fuzzy_skipped = 0
+
         async with aiosqlite.connect(self.db_path) as db:
             for job in jobs:
+                # First check exact hash match
                 try:
                     await db.execute(
-                        """INSERT INTO jobs 
+                        """INSERT INTO jobs
                            (unique_hash, title, company, location, url, source, category,
                             posted_date, description, salary_min, salary_max, job_type,
                             employment_type, seniority, remote, search_keyword, fetched_at)
@@ -126,11 +138,146 @@ class JobDatabase:
                     )
                     inserted += 1
                 except aiosqlite.IntegrityError:
+                    # Exact duplicate found, check for fuzzy matches
+                    if config.ENABLE_FUZZY_DEDUP and FUZZY_AVAILABLE:
+                        is_fuzzy_dup = await self._is_fuzzy_duplicate(db, job)
+                        if is_fuzzy_dup:
+                            fuzzy_skipped += 1
+                            # Optionally update the existing job with newer data
+                            await self._update_job_if_newer(db, job)
                     skipped += 1
             await db.commit()
-        
-        logger.info(f"Inserted {inserted} new jobs, skipped {skipped} duplicates")
-        return {"inserted": inserted, "skipped": skipped}
+
+        total_skipped = skipped + fuzzy_skipped
+        logger.info(f"Inserted {inserted} new jobs, skipped {total_skipped} duplicates ({fuzzy_skipped} fuzzy)")
+        return {"inserted": inserted, "skipped": total_skipped, "fuzzy_skipped": fuzzy_skipped}
+
+    async def _is_fuzzy_duplicate(self, db: aiosqlite.Connection, job: Job) -> bool:
+        """
+        Check if a job is a fuzzy duplicate of existing jobs.
+
+        Uses fuzzy string matching on title, company, and location.
+        Returns True if a similar job exists above the threshold.
+        """
+        # Get recent jobs from same category for comparison
+        cursor = await db.execute(
+            """SELECT id, title, company, location, url, source, posted_date
+               FROM jobs
+               WHERE category = ?
+               ORDER BY posted_date DESC
+               LIMIT 100""",
+            (job.category,)
+        )
+        existing_jobs = await cursor.fetchall()
+
+        if not existing_jobs:
+            return False
+
+        # Build comparison string for the new job
+        job_compare_str = f"{job.title} {job.company} {job.location}".lower()
+
+        for existing in existing_jobs:
+            existing_id, existing_title, existing_company, existing_location, existing_url, existing_source, existing_date = existing
+
+            # Skip if from the same source (exact dedup handles this)
+            if existing_source == job.source:
+                continue
+
+            # Skip if URL is similar (same job posting)
+            if self._urls_similar(job.url, existing_url):
+                return True
+
+            # Build comparison string for existing job
+            existing_compare_str = f"{existing_title} {existing_company} {existing_location}".lower()
+
+            # Calculate fuzzy similarity ratio
+            similarity = fuzz.token_sort_ratio(job_compare_str, existing_compare_str)
+
+            if similarity >= config.FUZZY_MATCH_THRESHOLD:
+                logger.debug(
+                    f"[dedup] Fuzzy match found: '{job.title}' @ {job.company} "
+                    f"matches '{existing_title}' @ {existing_company} "
+                    f"(similarity: {similarity:.0f}%)"
+                )
+                return True
+
+        return False
+
+    @staticmethod
+    def _urls_similar(url1: str, url2: str) -> bool:
+        """
+        Check if two URLs are similar (likely point to the same job).
+
+        Handles different URL formats for the same job posting.
+        """
+        if not url1 or not url2:
+            return False
+
+        # Normalize URLs
+        url1 = url1.lower().strip()
+        url2 = url2.lower().strip()
+
+        # Direct match
+        if url1 == url2:
+            return True
+
+        # Extract job IDs if present (common pattern: /jobs/12345)
+        import re
+        id_pattern = r'/jobs/(\d+)'
+        id1 = re.search(id_pattern, url1)
+        id2 = re.search(id_pattern, url2)
+
+        if id1 and id2 and id1.group(1) == id2.group(1):
+            return True
+
+        return False
+
+    async def _update_job_if_newer(self, db: aiosqlite.Connection, job: Job):
+        """
+        Update an existing job posting if the new one is more recent.
+
+        This ensures we keep the most up-to-date job information.
+        """
+        # Find the fuzzy match and update if newer
+        cursor = await db.execute(
+            """SELECT id, posted_date, description
+               FROM jobs
+               WHERE category = ? AND company = ?
+               ORDER BY posted_date DESC
+               LIMIT 1""",
+            (job.category, job.company)
+        )
+        existing = await cursor.fetchone()
+
+        if not existing:
+            return
+
+        existing_id, existing_date, existing_desc = existing
+
+        # Update if new job has more recent date or more complete description
+        should_update = False
+
+        if job.posted_date and existing_date:
+            try:
+                job_date = datetime.fromisoformat(job.posted_date.replace('Z', '+00:00'))
+                existing_date_dt = datetime.fromisoformat(existing_date.replace('Z', '+00:00'))
+
+                if job_date > existing_date_dt:
+                    should_update = True
+            except (ValueError, AttributeError):
+                pass
+
+        if not should_update and job.description and len(job.description) > len(existing_desc or ""):
+            should_update = True
+
+        if should_update:
+            await db.execute(
+                """UPDATE jobs
+                   SET description = ?, posted_date = ?, salary_min = ?, salary_max = ?
+                   WHERE id = ?""",
+                (job.description, job.posted_date, job.salary_min, job.salary_max, existing_id)
+            )
+            logger.debug(f"[dedup] Updated job {existing_id} with newer data")
     
     async def clean_old_jobs(self, days: int = 7) -> int:
         """Remove jobs posted more than `days` ago."""
@@ -143,6 +290,20 @@ class JobDatabase:
             if deleted > 0:
                 logger.info(f"Cleaned up {deleted} jobs older than {days} days")
             return deleted
+            
+    async def vacuum(self):
+        """Compact the database to reclaim disk space."""
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute("VACUUM;")
+            await db.commit()
+            size_mb = self.get_db_size_mb()
+            logger.info(f"Vacuumed database. New size: {size_mb:.1f} MB")
+            
+    def get_db_size_mb(self) -> float:
+        """Get database file size in MB."""
+        if self.db_path.exists():
+            return self.db_path.stat().st_size / (1024 * 1024)
+        return 0.0
     
     async def get_jobs(
         self,
@@ -321,6 +482,15 @@ class JobDatabase:
             "by_type": by_type,
             "recent_runs": runs,
         }
+
+    def vacuum_sync(self):
+        """Synchronous vacuum for Streamlit."""
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("VACUUM;")
+        conn.commit()
+        conn.close()
+        size_mb = self.get_db_size_mb()
+        logger.info(f"Vacuumed database (sync). New size: {size_mb:.1f} MB")
 
     # ─── Application Tracking Methods ─────────────────────────
 
