@@ -16,7 +16,11 @@ class TursoHTTPDatabase:
     """Turso database client using HTTP REST API (no compilation needed)."""
 
     def __init__(self, db_url: str, auth_token: str):
-        self.db_url = db_url
+        # Convert libsql:// URL to https:// for Turso HTTP API
+        api_url = db_url.replace("libsql://", "https://")
+        if not api_url.startswith("https://"):
+            api_url = f"https://{api_url}"
+        self.db_url = api_url
         self.auth_token = auth_token
         self.headers = {
             "Authorization": f"Bearer {auth_token}",
@@ -94,15 +98,72 @@ class TursoHTTPDatabase:
 
         logger.info(f"Turso HTTP database initialized at {self.db_url}")
 
+    def _build_payload(self, sql: str, params: tuple = ()):
+        """Build Turso v2 pipeline API payload."""
+        args = []
+        for p in params:
+            if p is None:
+                args.append({"type": "null", "value": None})
+            elif isinstance(p, int):
+                args.append({"type": "integer", "value": str(p)})
+            elif isinstance(p, float):
+                args.append({"type": "float", "value": p})
+            else:
+                args.append({"type": "text", "value": str(p)})
+
+        stmt = {"sql": sql}
+        if args:
+            stmt["args"] = args
+
+        return {
+            "requests": [
+                {"type": "execute", "stmt": stmt},
+                {"type": "close"}
+            ]
+        }
+
+    def _parse_response(self, result: dict) -> List[Dict[str, Any]]:
+        """Parse Turso v2 pipeline API response into rows."""
+        results = result.get("results", [])
+        if not results:
+            return []
+
+        first = results[0]
+        response = first.get("response", {})
+        resp_result = response.get("result", {})
+        rows_data = resp_result.get("rows", [])
+        cols = resp_result.get("cols", [])
+
+        if not rows_data:
+            return []
+
+        # Convert from [{type, value}, ...] per cell to simple tuples
+        parsed_rows = []
+        for row in rows_data:
+            parsed_row = []
+            for cell in row:
+                val = cell.get("value")
+                cell_type = cell.get("type", "")
+                if cell_type == "null" or val is None:
+                    parsed_row.append(None)
+                elif cell_type == "integer":
+                    parsed_row.append(int(val))
+                elif cell_type == "float":
+                    parsed_row.append(float(val))
+                else:
+                    parsed_row.append(val)
+            parsed_rows.append(tuple(parsed_row))
+
+        return parsed_rows
+
     async def _execute(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
         """Execute a SQL statement via HTTP."""
-        payload = {"statements": [{"q": sql}]}
-        if params:
-            payload["statements"][0]["params"] = params
+        payload = self._build_payload(sql, params)
+        url = f"{self.db_url}/v2/pipeline"
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                self.db_url,
+                url,
                 headers=self.headers,
                 json=payload,
                 timeout=30.0
@@ -110,19 +171,16 @@ class TursoHTTPDatabase:
             response.raise_for_status()
             result = response.json()
 
-        if result.get("results"):
-            return result["results"][0].get("rows", [])
-        return []
+        return self._parse_response(result)
 
     def _execute_sync(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
         """Synchronous version of execute."""
-        payload = {"statements": [{"q": sql}]}
-        if params:
-            payload["statements"][0]["params"] = params
+        payload = self._build_payload(sql, params)
+        url = f"{self.db_url}/v2/pipeline"
 
         with httpx.Client() as client:
             response = client.post(
-                self.db_url,
+                url,
                 headers=self.headers,
                 json=payload,
                 timeout=30.0
@@ -130,9 +188,35 @@ class TursoHTTPDatabase:
             response.raise_for_status()
             result = response.json()
 
-        if result.get("results"):
-            return result["results"][0].get("rows", [])
-        return []
+        return self._parse_response(result)
+
+    def _execute_sync_with_cols(self, sql: str, params: tuple = ()):
+        """Execute sync and also return column names from the response."""
+        payload = self._build_payload(sql, params)
+        url = f"{self.db_url}/v2/pipeline"
+
+        with httpx.Client() as client:
+            response = client.post(
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=30.0
+            )
+            response.raise_for_status()
+            result = response.json()
+
+        rows = self._parse_response(result)
+
+        # Extract column names from response
+        cols = []
+        results = result.get("results", [])
+        if results:
+            first = results[0]
+            resp = first.get("response", {})
+            resp_result = resp.get("result", {})
+            cols = [c.get("name", f"col{i}") for i, c in enumerate(resp_result.get("cols", []))]
+
+        return rows, cols
 
     async def insert_jobs(self, jobs: List[Any]) -> Dict[str, int]:
         """Insert jobs with deduplication."""
@@ -180,15 +264,10 @@ class TursoHTTPDatabase:
         query = f"SELECT * FROM jobs {where} ORDER BY posted_date DESC LIMIT ?"
         params.append(limit)
 
-        rows = self._execute_sync(query, tuple(params))
+        rows, columns = self._execute_sync_with_cols(query, tuple(params))
 
-        # Convert rows to dict with column names
-        if not rows:
+        if not rows or not columns:
             return []
-
-        # Get column names from PRAGMA table_info
-        columns_result = self._execute_sync("PRAGMA table_info(jobs)")
-        columns = [row[1] for row in columns_result]
 
         return [dict(zip(columns, row)) for row in rows]
 
@@ -230,12 +309,10 @@ class TursoHTTPDatabase:
         by_type = {row[0]: row[1] for row in type_rows}
 
         # Recent runs
-        runs_rows = self._execute_sync(
+        runs_rows, run_columns = self._execute_sync_with_cols(
             "SELECT * FROM search_runs ORDER BY started_at DESC LIMIT 10"
         )
-        columns_result = self._execute_sync("PRAGMA table_info(search_runs)")
-        run_columns = [row[1] for row in columns_result]
-        runs = [dict(zip(run_columns, row)) for row in runs_rows]
+        runs = [dict(zip(run_columns, row)) for row in runs_rows] if run_columns else []
 
         return {
             "total": total,
@@ -294,17 +371,9 @@ class TursoHTTPDatabase:
                     {where}
                     ORDER BY a.created_at DESC LIMIT 500"""
 
-        rows = self._execute_sync(query, tuple(params))
+        rows, all_columns = self._execute_sync_with_cols(query, tuple(params))
 
-        # Get column names
-        columns_result = self._execute_sync("PRAGMA table_info(applications)")
-        app_columns = [row[1] for row in columns_result]
-
-        # Add job columns
-        job_columns = ["title", "company", "location", "url", "category", "job_type", "salary_min", "salary_max", "source"]
-        all_columns = app_columns + job_columns
-
-        return [dict(zip(all_columns, row)) for row in rows]
+        return [dict(zip(all_columns, row)) for row in rows] if all_columns else []
 
     def get_application_stats_sync(self) -> Dict[str, Any]:
         """Get application funnel stats."""
