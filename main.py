@@ -283,7 +283,7 @@ async def run_once(sources: List[str] = None):
         if hasattr(db, "vacuum"):
             await db.vacuum()
     
-    db_type = "Turso Cloud ☁️" if config.USE_TURSO else f"Local SQLite 💾 ({config.DB_PATH})"
+    db_type = "Turso Cloud ☁️"
     console.print(f"\n  💾 Database: [bold]{db_type}[/bold]")
     console.print(
         f"  🌐 Dashboard: Run [bold cyan]python main.py --dashboard[/bold cyan] to view results"

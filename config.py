@@ -39,12 +39,13 @@ SCRAPERAPI_KEY = _get_config("SCRAPERAPI_KEY")
 DB_PATH = PROJECT_ROOT / "data" / "jobs.db"
 TRACKED_COMPANIES_PATH = PROJECT_ROOT / "data" / "tracked_companies.json"
 
-TURSO_DATABASE_URL = _get_config("TURSO_DATABASE_URL")
-TURSO_AUTH_TOKEN = _get_config("TURSO_AUTH_TOKEN")
-
 def get_database():
     """Factory to get Turso Cloud database instance (Turso is required)."""
-    if not TURSO_DATABASE_URL or not TURSO_AUTH_TOKEN:
+    # Read at call time so Streamlit secrets are available (not at import time)
+    turso_url = _get_config("TURSO_DATABASE_URL")
+    turso_token = _get_config("TURSO_AUTH_TOKEN")
+    
+    if not turso_url or not turso_token:
         raise ValueError(
             "Turso Cloud database credentials are required. "
             "Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in .env file or Streamlit secrets."
@@ -52,7 +53,7 @@ def get_database():
 
     # Use HTTP-based Turso client (works on Streamlit Cloud without compilation)
     from models.turso_http_database import TursoHTTPDatabase
-    return TursoHTTPDatabase(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
+    return TursoHTTPDatabase(turso_url, turso_token)
 
 # ─── API Endpoints ──────────────────────────────────────────
 USAJOBS_BASE_URL = "https://data.usajobs.gov/api/Search"

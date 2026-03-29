@@ -30,8 +30,7 @@ st.set_page_config(
 
 # Initialize DB (creates applications table if not exists)
 db = config.get_database()
-if config.USE_TURSO or config.DB_PATH.exists():
-    db.init_sync()
+db.init_sync()
 
 # ─── Custom CSS ─────────────────────────────────────────────
 st.markdown("""
