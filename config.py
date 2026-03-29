@@ -16,16 +16,22 @@ load_dotenv(PROJECT_ROOT / ".env")
 # ─── Helper to get config from environment or Streamlit secrets ─────
 def _get_config(key: str, default: str = "") -> str:
     """Get configuration value from environment or Streamlit secrets."""
-    value = os.getenv(key, default)
-    if not value:
-        try:
-            import streamlit as st
-            value = st.secrets.get(key, default)
-        except ImportError:
-            pass
-        except Exception:
-            pass
-    return value
+    # 1. Try environment variables first (works locally and in GitHub Actions)
+    value = os.getenv(key, "")
+    if value:
+        return value
+    
+    # 2. Try Streamlit secrets (works on Streamlit Cloud)
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets:
+            return str(st.secrets[key])
+    except ImportError:
+        pass
+    except Exception:
+        pass
+    
+    return default
 
 # ─── API Keys ───────────────────────────────────────────────
 USAJOBS_API_KEY = _get_config("USAJOBS_API_KEY")
