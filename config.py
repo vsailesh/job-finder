@@ -13,27 +13,41 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).parent
 load_dotenv(PROJECT_ROOT / ".env")
 
+# ─── Helper to get config from environment or Streamlit secrets ─────
+def _get_config(key: str, default: str = "") -> str:
+    """Get configuration value from environment or Streamlit secrets."""
+    value = os.getenv(key, default)
+    if not value:
+        try:
+            import streamlit as st
+            value = st.secrets.get(key, default)
+        except ImportError:
+            pass
+        except Exception:
+            pass
+    return value
+
 # ─── API Keys ───────────────────────────────────────────────
-USAJOBS_API_KEY = os.getenv("USAJOBS_API_KEY", "")
-USAJOBS_EMAIL = os.getenv("USAJOBS_EMAIL", "")
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
-ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID", "")
-ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
-SCRAPERAPI_KEY = os.getenv("SCRAPERAPI_KEY", "")
+USAJOBS_API_KEY = _get_config("USAJOBS_API_KEY")
+USAJOBS_EMAIL = _get_config("USAJOBS_EMAIL")
+RAPIDAPI_KEY = _get_config("RAPIDAPI_KEY")
+ADZUNA_APP_ID = _get_config("ADZUNA_APP_ID")
+ADZUNA_APP_KEY = _get_config("ADZUNA_APP_KEY")
+SCRAPERAPI_KEY = _get_config("SCRAPERAPI_KEY")
 
 # ─── Database ───────────────────────────────────────────────
 DB_PATH = PROJECT_ROOT / "data" / "jobs.db"
 TRACKED_COMPANIES_PATH = PROJECT_ROOT / "data" / "tracked_companies.json"
 
-TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL", "")
-TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN", "")
+TURSO_DATABASE_URL = _get_config("TURSO_DATABASE_URL")
+TURSO_AUTH_TOKEN = _get_config("TURSO_AUTH_TOKEN")
 
 def get_database():
     """Factory to get Turso Cloud database instance (Turso is required)."""
     if not TURSO_DATABASE_URL or not TURSO_AUTH_TOKEN:
         raise ValueError(
             "Turso Cloud database credentials are required. "
-            "Please set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN environment variables."
+            "Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in .env file or Streamlit secrets."
         )
 
     # Use HTTP-based Turso client (works on Streamlit Cloud without compilation)
@@ -225,7 +239,7 @@ ENABLED_SOURCES = {
 
 # ─── Additional API Endpoints ────────────────────────────────
 ZIPRECRUITER_BASE_URL = "https://api.ziprecruiter.com/jobs-app/version"
-ZIPRECRUITER_API_KEY = os.getenv("ZIPRECRUITER_API_KEY", "")
+ZIPRECRUITER_API_KEY = _get_config("ZIPRECRUITER_API_KEY")
 
 YC_JOBS_BASE_URL = "https://www.workatastartup.com/api/jobs"
 OTTA_BASE_URL = "https://www.otta.com/api/v0/jobs"
