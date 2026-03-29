@@ -72,18 +72,9 @@ def get_database():
             pass
     
     if not turso_url or not turso_token:
-        # Collect debug info to help diagnose
-        available_keys = []
-        try:
-            import streamlit as st
-            available_keys = list(st.secrets.keys()) if hasattr(st.secrets, 'keys') else []
-        except Exception:
-            pass
         raise ValueError(
-            f"Turso Cloud database credentials are required. "
-            f"Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in .env file or Streamlit secrets. "
-            f"Found url={'yes' if turso_url else 'no'}, token={'yes' if turso_token else 'no'}. "
-            f"Available secret keys: {available_keys}"
+            "Turso Cloud database credentials are required. "
+            "Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in .env file or Streamlit secrets."
         )
 
     # Use HTTP-based Turso client (works on Streamlit Cloud without compilation)
