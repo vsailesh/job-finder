@@ -6,7 +6,7 @@ A multi-source, automated job-finding agent that searches **federal, state, and 
 
 - **19 job sources** — Federal, corporate aggregators, tech startups, healthcare, defense, and more
 - **11 search categories** — Science, Tech, Defense, Finance, Healthcare, and more
-- **Turso Cloud** — Cloud database for scalable job storage
+- **Turso Cloud** — Cloud database via HTTP REST API (no compilation needed)
 - **Profile system** — Create applicant profiles with skills, preferences, and resumes
 - **Smart matching** — Weighted scoring across skills, title similarity, salary, location, and clearance
 - **Fuzzy deduplication** — Automatic duplicate detection across sources using RapidFuzz
@@ -213,7 +213,7 @@ job-finder-agent/
 ├── models/
 │   ├── job.py               # Job dataclass
 │   ├── database.py          # Database interface with fuzzy dedup
-│   ├── turso_database.py    # Turso cloud database implementation
+│   ├── turso_http_database.py  # Turso cloud database via HTTP (works on Streamlit Cloud)
 │   └── profile.py           # Applicant profile model with smart matching
 ├── dashboard/
 │   └── app.py               # Streamlit dashboard

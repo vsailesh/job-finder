@@ -36,14 +36,9 @@ def get_database():
             "Please set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN environment variables."
         )
 
-    try:
-        from models.turso_database import TursoDatabase
-        return TursoDatabase(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
-    except ImportError as e:
-        raise ImportError(
-            "libsql-experimental is required for Turso Cloud database. "
-            "Install it with: pip install libsql-experimental"
-        ) from e
+    # Use HTTP-based Turso client (works on Streamlit Cloud without compilation)
+    from models.turso_http_database import TursoHTTPDatabase
+    return TursoHTTPDatabase(TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
 
 # ─── API Endpoints ──────────────────────────────────────────
 USAJOBS_BASE_URL = "https://data.usajobs.gov/api/Search"
