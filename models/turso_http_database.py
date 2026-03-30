@@ -156,7 +156,7 @@ class TursoHTTPDatabase:
 
         return parsed_rows
 
-    async def _execute(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
+    async def _execute(self, sql: str, params: tuple = (), timeout: float = 30.0) -> List[Dict[str, Any]]:
         """Execute a SQL statement via HTTP."""
         payload = self._build_payload(sql, params)
         url = f"{self.db_url}/v2/pipeline"
@@ -166,14 +166,14 @@ class TursoHTTPDatabase:
                 url,
                 headers=self.headers,
                 json=payload,
-                timeout=30.0
+                timeout=timeout
             )
             response.raise_for_status()
             result = response.json()
 
         return self._parse_response(result)
 
-    def _execute_sync(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
+    def _execute_sync(self, sql: str, params: tuple = (), timeout: float = 30.0) -> List[Dict[str, Any]]:
         """Synchronous version of execute."""
         payload = self._build_payload(sql, params)
         url = f"{self.db_url}/v2/pipeline"
@@ -183,14 +183,14 @@ class TursoHTTPDatabase:
                 url,
                 headers=self.headers,
                 json=payload,
-                timeout=30.0
+                timeout=timeout
             )
             response.raise_for_status()
             result = response.json()
 
         return self._parse_response(result)
 
-    def _execute_sync_with_cols(self, sql: str, params: tuple = ()):
+    def _execute_sync_with_cols(self, sql: str, params: tuple = (), timeout: float = 30.0):
         """Execute sync and also return column names from the response."""
         payload = self._build_payload(sql, params)
         url = f"{self.db_url}/v2/pipeline"
@@ -200,7 +200,7 @@ class TursoHTTPDatabase:
                 url,
                 headers=self.headers,
                 json=payload,
-                timeout=30.0
+                timeout=timeout
             )
             response.raise_for_status()
             result = response.json()
@@ -358,7 +358,8 @@ class TursoHTTPDatabase:
         if count > 0:
             self._execute_sync(
                 "DELETE FROM jobs WHERE datetime(posted_date) <= datetime(?)",
-                (cutoff,)
+                (cutoff,),
+                timeout=120.0  # Bulk delete might take longer
             )
             logger.info(f"Cleaned up {count} jobs older than {days} days from Turso")
         return count
