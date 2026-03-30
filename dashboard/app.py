@@ -474,14 +474,7 @@ def main():
         sources = sorted(df["source"].unique().tolist())
         selected_sources = st.multiselect("Sources", sources, default=sources)
 
-        categories = sorted(df["category"].unique().tolist())
-        # Apply click filter from session state
-        default_cats = categories
-        if "filter_category" in st.session_state and st.session_state.filter_category:
-            fc = st.session_state.filter_category
-            if fc in categories:
-                default_cats = [fc]
-        selected_categories = st.multiselect("Categories", categories, default=default_cats)
+        # REMOVED: Old category filter - now using unified sectors
 
         job_types = sorted(df["job_type"].unique().tolist())
         default_types = job_types
@@ -512,15 +505,14 @@ def main():
         else:
             st.caption("No salary data available")
 
-        # Reset filter buttons  
+        # Reset filter buttons
         if st.button("🔄 Reset All Filters"):
-            for key in ["filter_category", "filter_type", "filter_source", "filter_company"]:
+            for key in ["filter_sector", "filter_type", "filter_source", "filter_company"]:
                 st.session_state.pop(key, None)
             st.rerun()
 
     # ─── Apply Filters ──────────────────────────────────────
     mask = (df["source"].isin(selected_sources) &
-            df["category"].isin(selected_categories) &
             df["job_type"].isin(selected_types) &
             df["seniority_level"].isin(selected_seniorities) &
             df["sector"].isin(selected_sectors) &
@@ -573,23 +565,23 @@ def main():
         chart_col1, chart_col2 = st.columns(2)
 
         with chart_col1:
-            cat_counts = filtered["category"].value_counts().reset_index()
-            cat_counts.columns = ["Category", "Count"]
+            sector_counts = filtered["sector"].value_counts().reset_index()
+            sector_counts.columns = ["Sector", "Count"]
             fig = px.bar(
-                cat_counts, x="Count", y="Category", orientation="h",
+                sector_counts, x="Count", y="Sector", orientation="h",
                 color="Count", color_continuous_scale=["#c3cfe2", "#667eea", "#764ba2"],
-                title="Jobs by Category (click to filter)",
+                title="Jobs by Sector (click to filter)",
             )
             fig.update_layout(
                 showlegend=False, coloraxis_showscale=False,
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(family="Inter"), height=400,
             )
-            event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", key="cat_chart")
+            event = st.plotly_chart(fig, use_container_width=True, on_select="rerun", key="sector_chart_click")
             if event and event.selection and event.selection.points:
-                clicked_cat = event.selection.points[0].get("y")
-                if clicked_cat:
-                    st.session_state.filter_category = clicked_cat
+                clicked_sector = event.selection.points[0].get("y")
+                if clicked_sector:
+                    st.session_state.filter_sector = clicked_sector
                     st.rerun()
 
         with chart_col2:
@@ -645,8 +637,8 @@ def main():
 
         # Active filters display
         active_filters = []
-        if "filter_category" in st.session_state and st.session_state.filter_category:
-            active_filters.append(f"Category: **{st.session_state.filter_category}**")
+        if "filter_sector" in st.session_state and st.session_state.filter_sector:
+            active_filters.append(f"Sector: **{st.session_state.filter_sector}**")
         if "filter_type" in st.session_state and st.session_state.filter_type:
             active_filters.append(f"Type: **{st.session_state.filter_type}**")
         if "filter_company" in st.session_state and st.session_state.filter_company:
@@ -965,16 +957,16 @@ def main():
         col_d1, col_d2 = st.columns(2)
 
         with col_d1:
-            # Sunburst: Category → Sector → Job Type
-            sunburst_data = filtered.groupby(["category", "sector", "job_category"]).size().reset_index(name="count")
+            # Sunburst: Job Type → Sector → Seniority (hierarchical view)
+            sunburst_data = filtered.groupby(["job_category", "sector", "seniority_level"]).size().reset_index(name="count")
             sunburst_data = sunburst_data[sunburst_data["count"] > 0]
 
             if not sunburst_data.empty:
                 fig_sunburst = px.sunburst(
                     sunburst_data,
-                    path=["category", "sector", "job_category"],
+                    path=["job_category", "sector", "seniority_level"],
                     values="count",
-                    title="Job Distribution Hierarchy (Category → Sector → Job Type)",
+                    title="Job Distribution Hierarchy (Job Type → Sector → Seniority)",
                     color="count",
                     color_continuous_scale="RdYlGn",
                 )
@@ -1101,7 +1093,7 @@ def main():
     with tab2:
         st.markdown(f"### 📋 {len(filtered):,} Job Listings")
 
-        display_cols = ["title", "company", "location", "source", "category",
+        display_cols = ["title", "company", "location", "source", "sector",
                         "job_type", "salary_min", "salary_max", "employment_type",
                         "posted_date", "url"]
         available_cols = [c for c in display_cols if c in filtered.columns]
@@ -1121,13 +1113,13 @@ def main():
 
         col_renames = {
             "title": "Title", "company": "Company", "location": "Location",
-            "source": "Source", "category": "Category", "job_type": "Type",
+            "source": "Source", "sector": "Sector", "job_type": "Type",
             "employment_type": "Employment", "posted_date": "Posted",
             "salary": "Salary", "url": "Apply Link",
         }
         display_df = display_df.rename(columns=col_renames)
 
-        sort_col = st.selectbox("Sort by", ["Posted", "Title", "Company", "Salary", "Category"], index=0)
+        sort_col = st.selectbox("Sort by", ["Posted", "Title", "Company", "Salary", "Sector"], index=0)
         sort_asc = st.checkbox("Ascending", value=False)
         if sort_col in display_df.columns:
             display_df = display_df.sort_values(sort_col, ascending=sort_asc, na_position="last")
@@ -1168,7 +1160,7 @@ def main():
 
                 # Show matching jobs with checkboxes
                 needed_cols = ["id", "title", "company", "location", "source",
-                               "category", "job_type", "url", "unique_hash", "description",
+                               "sector", "job_type", "url", "unique_hash", "description",
                                "salary_min", "salary_max"]
                 avail_needed = [c for c in needed_cols if c in filtered.columns]
                 apply_df = filtered[avail_needed].copy()
@@ -1193,7 +1185,7 @@ def main():
                 display_apply = apply_df.head(100)
 
                 if not display_apply.empty:
-                    sel_cols = ["title", "company", "location", "category", "job_type"]
+                    sel_cols = ["title", "company", "location", "sector", "job_type"]
                     if "Match" in display_apply.columns:
                         sel_cols.append("Match")
                     if "Status" in display_apply.columns:
@@ -1203,7 +1195,7 @@ def main():
                     selection = st.dataframe(
                         display_apply[avail].rename(columns={
                             "title": "Title", "company": "Company",
-                            "location": "Location", "category": "Category",
+                            "location": "Location", "sector": "Sector",
                             "job_type": "Type"
                         }),
                         use_container_width=True, height=400,
@@ -1580,35 +1572,35 @@ asyncio.run(run())
                 st.plotly_chart(fig_hist, use_container_width=True, key="sal_hist")
 
             with a_c2:
-                cat_salary = sal_df.groupby("category").agg(
+                sector_salary = sal_df.groupby("sector").agg(
                     median_sal=("salary_mid", "median"),
                     p25=("salary_mid", lambda x: x.quantile(0.25)),
                     p75=("salary_mid", lambda x: x.quantile(0.75)),
                     count=("salary_mid", "count"),
                 ).reset_index().sort_values("median_sal", ascending=True)
 
-                fig_cat = go.Figure()
-                fig_cat.add_trace(go.Bar(
-                    y=cat_salary["category"], x=cat_salary["median_sal"],
+                fig_sector = go.Figure()
+                fig_sector.add_trace(go.Bar(
+                    y=sector_salary["sector"], x=sector_salary["median_sal"],
                     orientation="h", name="Median",
                     marker_color="#667eea",
-                    text=[f"${v:,.0f}" for v in cat_salary["median_sal"]],
+                    text=[f"${v:,.0f}" for v in sector_salary["median_sal"]],
                     textposition="outside",
                 ))
-                fig_cat.add_trace(go.Bar(
-                    y=cat_salary["category"], x=cat_salary["p75"] - cat_salary["median_sal"],
+                fig_sector.add_trace(go.Bar(
+                    y=sector_salary["sector"], x=sector_salary["p75"] - sector_salary["median_sal"],
                     orientation="h", name="75th %",
-                    marker_color="rgba(124,58,237,0.4)", base=cat_salary["median_sal"],
+                    marker_color="rgba(124,58,237,0.4)", base=sector_salary["median_sal"],
                 ))
-                fig_cat.update_layout(
-                    title="Salary by Category (Median + 75th)",
+                fig_sector.update_layout(
+                    title="Salary by Sector (Median + 75th)",
                     barmode="stack", height=400, showlegend=True,
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(family="Inter"),
                     xaxis_title="Salary ($)",
                     legend=dict(orientation="h", yanchor="bottom", y=1.02),
                 )
-                st.plotly_chart(fig_cat, use_container_width=True, key="sal_by_cat")
+                st.plotly_chart(fig_sector, use_container_width=True, key="sal_by_sector")
 
             # ── Row 2: Seniority Distribution + Salary by Seniority ──
             a_c3, a_c4 = st.columns(2)
@@ -1766,12 +1758,12 @@ asyncio.run(run())
                 else:
                     st.info("Not enough employer salary data for this view.")
 
-            # ── Row 5: Salary Heatmap — Category × Seniority ──
+            # ── Row 5: Salary Heatmap — Sector × Seniority ──
             st.markdown("---")
-            st.markdown("#### 🔥 Salary Heatmap: Category × Seniority")
+            st.markdown("#### 🔥 Salary Heatmap: Sector × Seniority")
 
-            heat_data = sal_df.groupby(["category", "seniority_level"])["salary_mid"].median().reset_index()
-            heat_pivot = heat_data.pivot(index="category", columns="seniority_level", values="salary_mid")
+            heat_data = sal_df.groupby(["sector", "seniority_level"])["salary_mid"].median().reset_index()
+            heat_pivot = heat_data.pivot(index="sector", columns="seniority_level", values="salary_mid")
             heat_pivot = heat_pivot.reindex(columns=seniority_order)
             heat_pivot = heat_pivot.dropna(how="all")
 
@@ -1783,14 +1775,14 @@ asyncio.run(run())
                     colorscale="RdYlGn",
                     text=[[f"${v:,.0f}" if not np.isnan(v) else "" for v in row] for row in heat_pivot.values],
                     texttemplate="%{text}",
-                    hovertemplate="Category: %{y}<br>Seniority: %{x}<br>Median Salary: %{text}<extra></extra>",
+                    hovertemplate="Sector: %{y}<br>Seniority: %{x}<br>Median Salary: %{text}<extra></extra>",
                 ))
                 fig_heat.update_layout(
                     height=450,
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(family="Inter"),
                     xaxis_title="Seniority Level",
-                    yaxis_title="Category",
+                    yaxis_title="Sector",
                 )
                 st.plotly_chart(fig_heat, use_container_width=True, key="sal_heatmap")
             else:
