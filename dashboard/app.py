@@ -92,7 +92,7 @@ def load_data(hours: int = 0) -> pd.DataFrame:
     """Load jobs from database."""
     if not config.DB_PATH.exists():
         return pd.DataFrame()
-    jobs = db.get_jobs_sync(hours=hours, limit=50000)
+    jobs = db.get_jobs_sync(hours=hours, limit=None)
     if not jobs:
         return pd.DataFrame()
     df = pd.DataFrame(jobs)

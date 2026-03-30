@@ -250,7 +250,7 @@ class TursoHTTPDatabase:
         logger.info(f"Inserted {inserted} new jobs, skipped {skipped} duplicates")
         return {"inserted": inserted, "skipped": skipped}
 
-    def get_jobs_sync(self, hours: int = 0, limit: int = 5000) -> List[Dict[str, Any]]:
+    def get_jobs_sync(self, hours: int = 0, limit: Optional[int] = 5000) -> List[Dict[str, Any]]:
         """Get jobs (synchronous for Streamlit)."""
         conditions = []
         params = []
@@ -261,8 +261,12 @@ class TursoHTTPDatabase:
             params.append(cutoff)
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-        query = f"SELECT * FROM jobs {where} ORDER BY posted_date DESC LIMIT ?"
-        params.append(limit)
+        
+        if limit is not None:
+            query = f"SELECT * FROM jobs {where} ORDER BY posted_date DESC LIMIT ?"
+            params.append(limit)
+        else:
+            query = f"SELECT * FROM jobs {where} ORDER BY posted_date DESC"
 
         rows, columns = self._execute_sync_with_cols(query, tuple(params))
 
