@@ -365,8 +365,9 @@ class TursoHTTPDatabase:
         return count
 
     async def vacuum(self):
-        """Turso manages storage itself, vacuum is a no-op."""
-        logger.info("Turso Cloud manages storage automatically - no vacuum needed.")
+        """Reclaim storage space by executing a VACUUM command."""
+        logger.info("Running VACUUM to reclaim Turso storage space...")
+        self._execute_sync("VACUUM", timeout=120.0)
 
     def queue_application(self, job_id: int, job_hash: str, profile_name: str, cover_letter: str = "") -> int:
         """Queue a job for auto-apply."""
@@ -469,5 +470,6 @@ class TursoHTTPDatabase:
         logger.info(f"Turso HTTP database initialized (sync) at {self.db_url}")
 
     def vacuum_sync(self):
-        """Vacuum is not supported via HTTP API."""
-        logger.info("Vacuum not available via HTTP API - use Turso CLI instead")
+        """Synchronous VACUUM."""
+        logger.info("Running VACUUM to reclaim Turso storage space...")
+        self._execute_sync("VACUUM", timeout=120.0)
