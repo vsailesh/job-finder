@@ -250,24 +250,27 @@ async def run_once(sources: List[str] = None):
     console.print(f"\n  ⏱️  Completed in [bold]{elapsed:.1f}s[/bold]")
     
     # Show category breakdown
-    stats = await db.get_stats(hours=24)
-    if stats["by_category"]:
-        cat_table = Table(title="Jobs by Category (Last 24h)", box=box.ROUNDED)
-        cat_table.add_column("Category", style="cyan")
-        cat_table.add_column("Count", justify="right", style="green")
-        for cat, count in sorted(stats["by_category"].items(), key=lambda x: -x[1]):
-            cat_table.add_row(cat, str(count))
-        console.print()
-        console.print(cat_table)
-    
-    if stats["by_type"]:
-        type_table = Table(title="Jobs by Type (Last 24h)", box=box.ROUNDED)
-        type_table.add_column("Type", style="cyan")
-        type_table.add_column("Count", justify="right", style="green")
-        for jtype, count in sorted(stats["by_type"].items(), key=lambda x: -x[1]):
-            type_table.add_row(jtype, str(count))
-        console.print()
-        console.print(type_table)
+    try:
+        stats = await db.get_stats(hours=24)
+        if stats["by_category"]:
+            cat_table = Table(title="Jobs by Category (Last 24h)", box=box.ROUNDED)
+            cat_table.add_column("Category", style="cyan")
+            cat_table.add_column("Count", justify="right", style="green")
+            for cat, count in sorted(stats["by_category"].items(), key=lambda x: -x[1]):
+                cat_table.add_row(cat, str(count))
+            console.print()
+            console.print(cat_table)
+        
+        if stats["by_type"]:
+            type_table = Table(title="Jobs by Type (Last 24h)", box=box.ROUNDED)
+            type_table.add_column("Type", style="cyan")
+            type_table.add_column("Count", justify="right", style="green")
+            for jtype, count in sorted(stats["by_type"].items(), key=lambda x: -x[1]):
+                type_table.add_row(jtype, str(count))
+            console.print()
+            console.print(type_table)
+    except Exception as e:
+        console.print(f"[yellow]Could not generate end-of-run stats (timeout or db error). Safe to ignore.[/yellow] ({e})")
     
     # Complete the run record
     sources_searched = ",".join(r["name"] for r in results if not r["error"])
@@ -276,12 +279,15 @@ async def run_once(sources: List[str] = None):
     import os
     if os.environ.get("GITHUB_ACTIONS") == "true":
         console.print(f"\n  🧹 [bold yellow]GitHub Actions detected[/bold yellow] - cleaning jobs older than 7 days...")
-        deleted_count = await db.clean_old_jobs(days=7)
-        console.print(f"  🗑️  Removed [red]{deleted_count}[/red] old jobs to keep cloud DB lightweight")
-        
-        # Run vacuum to reclaim disk space (meaningful for local SQLite)
-        if hasattr(db, "vacuum"):
-            await db.vacuum()
+        try:
+            deleted_count = await db.clean_old_jobs(days=7)
+            console.print(f"  🗑️  Removed [red]{deleted_count}[/red] old jobs to keep cloud DB lightweight")
+            
+            # Run vacuum to reclaim disk space (meaningful for local SQLite)
+            if hasattr(db, "vacuum"):
+                await db.vacuum()
+        except Exception as e:
+            console.print(f"  [yellow]Cleanup or vacuum skipped due to timeout or error. Safe to ignore.[/yellow] ({e})")
     
     db_type = "Turso Cloud ☁️"
     console.print(f"\n  💾 Database: [bold]{db_type}[/bold]")
