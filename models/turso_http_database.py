@@ -268,7 +268,8 @@ class TursoHTTPDatabase:
         else:
             query = f"SELECT * FROM jobs {where} ORDER BY posted_date DESC"
 
-        rows, columns = self._execute_sync_with_cols(query, tuple(params))
+        # Getting all jobs can take well over 30s just to download the JSON response on huge datasets 
+        rows, columns = self._execute_sync_with_cols(query, tuple(params), timeout=240.0)
 
         if not rows or not columns:
             return []
@@ -292,33 +293,37 @@ class TursoHTTPDatabase:
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
         # Total jobs
-        total_rows = self._execute_sync(f"SELECT COUNT(*) FROM jobs {where}", tuple(params))
+        total_rows = self._execute_sync(f"SELECT COUNT(*) FROM jobs {where}", tuple(params), timeout=120.0)
         total = total_rows[0][0] if total_rows else 0
 
         # By source
         source_rows = self._execute_sync(
             f"SELECT source, COUNT(*) as count FROM jobs {where} GROUP BY source ORDER BY count DESC",
-            tuple(params)
+            tuple(params),
+            timeout=120.0
         )
         by_source = {row[0]: row[1] for row in source_rows}
 
         # By category
         category_rows = self._execute_sync(
             f"SELECT category, COUNT(*) as count FROM jobs {where} GROUP BY category ORDER BY count DESC",
-            tuple(params)
+            tuple(params),
+            timeout=120.0
         )
         by_category = {row[0]: row[1] for row in category_rows}
 
         # By job type
         type_rows = self._execute_sync(
             f"SELECT job_type, COUNT(*) as count FROM jobs {where} GROUP BY job_type ORDER BY count DESC",
-            tuple(params)
+            tuple(params),
+            timeout=120.0
         )
         by_type = {row[0]: row[1] for row in type_rows}
 
         # Recent runs
         runs_rows, run_columns = self._execute_sync_with_cols(
-            "SELECT * FROM search_runs ORDER BY started_at DESC LIMIT 10"
+            "SELECT * FROM search_runs ORDER BY started_at DESC LIMIT 10",
+            timeout=120.0
         )
         runs = [dict(zip(run_columns, row)) for row in runs_rows] if run_columns else []
 
@@ -428,13 +433,13 @@ class TursoHTTPDatabase:
 
     def get_application_stats_sync(self) -> Dict[str, Any]:
         """Get application funnel stats."""
-        status_rows = self._execute_sync("SELECT status, COUNT(*) FROM applications GROUP BY status")
+        status_rows = self._execute_sync("SELECT status, COUNT(*) FROM applications GROUP BY status", timeout=60.0)
         by_status = {row[0]: row[1] for row in status_rows}
 
-        profiles_rows = self._execute_sync("SELECT COUNT(DISTINCT profile_name) FROM applications")
+        profiles_rows = self._execute_sync("SELECT COUNT(DISTINCT profile_name) FROM applications", timeout=60.0)
         profiles_used = profiles_rows[0][0] if profiles_rows else 0
 
-        total_rows = self._execute_sync("SELECT COUNT(*) FROM applications")
+        total_rows = self._execute_sync("SELECT COUNT(*) FROM applications", timeout=60.0)
         total = total_rows[0][0] if total_rows else 0
 
         return {
