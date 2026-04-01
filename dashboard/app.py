@@ -88,6 +88,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+@st.cache_data(ttl=900, show_spinner="Fetching latest jobs from Turso cloud...")
 def load_data(hours: int = 0) -> pd.DataFrame:
     """Load jobs from database."""
     if not config.DB_PATH.exists():
@@ -100,6 +101,13 @@ def load_data(hours: int = 0) -> pd.DataFrame:
         df["posted_date"] = pd.to_datetime(df["posted_date"], utc=True, format="mixed", errors="coerce")
     if "fetched_at" in df.columns:
         df["fetched_at"] = pd.to_datetime(df["fetched_at"], utc=True, format="mixed", errors="coerce")
+        
+    # Run heavy text classifications ONCE during data load, then cache in RAM
+    if "title" in df.columns:
+        df["seniority_level"] = df["title"].apply(classify_seniority)
+        df["sector"] = df.apply(lambda r: classify_sector(r.get("title", ""), r.get("category", ""), r.get("description", "")), axis=1)
+        df["job_category"] = df.apply(lambda r: classify_job_type(r.get("title", ""), r.get("category", ""), r.get("description", "")), axis=1)
+        
     return df
 
 
@@ -462,11 +470,6 @@ def main():
         if df.empty:
             st.warning("No jobs found. Run the agent first:\n```\npython main.py\n```")
             st.stop()
-
-        df["seniority_level"] = df["title"].apply(classify_seniority)
-        df["sector"] = df.apply(lambda r: classify_sector(r.get("title", ""), r.get("category", ""), r.get("description", "")), axis=1)
-        df["job_category"] = df.apply(lambda r: classify_job_type(r.get("title", ""), r.get("category", ""), r.get("description", "")), axis=1)
-
         seniorities = ['Entry', 'Junior', 'Mid-Level', 'Senior', 'Lead / Principal', 'Director / VP', 'C-Level']
         available_seniorities = [s for s in seniorities if s in df["seniority_level"].unique()]
         selected_seniorities = st.multiselect("Seniority", available_seniorities, default=available_seniorities)
