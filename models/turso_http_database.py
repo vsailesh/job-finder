@@ -262,19 +262,43 @@ class TursoHTTPDatabase:
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         
-        if limit is not None:
+        if limit is not None and limit <= 10000:
             query = f"SELECT * FROM jobs {where} ORDER BY posted_date DESC LIMIT ?"
             params.append(limit)
-        else:
-            query = f"SELECT * FROM jobs {where} ORDER BY posted_date DESC"
+            rows, columns = self._execute_sync_with_cols(query, tuple(params), timeout=120.0)
+            if not rows or not columns:
+                return []
+            return [dict(zip(columns, row)) for row in rows]
 
-        # Getting all jobs can take well over 30s just to download the JSON response on huge datasets 
-        rows, columns = self._execute_sync_with_cols(query, tuple(params), timeout=240.0)
-
-        if not rows or not columns:
-            return []
-
-        return [dict(zip(columns, row)) for row in rows]
+        # For huge limits or infinity (None), chunk the HTTP queries to prevent ReadTimeout
+        target_limit = limit if limit is not None else 9999999
+        chunk_size = 10000
+        offset = 0
+        all_jobs = []
+        
+        while offset < target_limit:
+            current_chunk = min(chunk_size, target_limit - offset)
+            query = f"SELECT * FROM jobs {where} ORDER BY posted_date DESC LIMIT ? OFFSET ?"
+            
+            chunk_params = list(params) + [current_chunk, offset]
+            
+            try:
+                rows, columns = self._execute_sync_with_cols(query, tuple(chunk_params), timeout=120.0)
+            except Exception as e:
+                logger.error(f"Error fetching chunk at offset {offset}: {e}")
+                break
+                
+            if not rows or not columns:
+                break
+                
+            all_jobs.extend([dict(zip(columns, row)) for row in rows])
+            
+            if len(rows) < current_chunk:
+                break  # Reached the end of the data
+                
+            offset += current_chunk
+            
+        return all_jobs
 
     async def get_jobs(self, source=None, category=None, job_type=None, hours=24, search=None, limit=500, offset=0) -> List[Dict[str, Any]]:
         """Async version - delegates to sync since HTTP client is sync-safe."""
