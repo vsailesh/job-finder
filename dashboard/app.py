@@ -98,9 +98,9 @@ def load_data(hours: int = 0) -> pd.DataFrame:
         return pd.DataFrame()
     df = pd.DataFrame(jobs)
     if "posted_date" in df.columns:
-        df["posted_date"] = pd.to_datetime(df["posted_date"], utc=True, format="mixed", errors="coerce")
+        df["posted_date"] = pd.to_datetime(df["posted_date"], utc=True, errors="coerce")
     if "fetched_at" in df.columns:
-        df["fetched_at"] = pd.to_datetime(df["fetched_at"], utc=True, format="mixed", errors="coerce")
+        df["fetched_at"] = pd.to_datetime(df["fetched_at"], utc=True, errors="coerce")
         
     # Run heavy text classifications ONCE during data load, then cache in RAM
     if "title" in df.columns:
