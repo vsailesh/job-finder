@@ -94,7 +94,7 @@ class TursoHTTPDatabase:
         ]
 
         for statement in statements:
-            await self._execute(statement)
+            await self._execute(statement, timeout=120.0)
 
         logger.info(f"Turso HTTP database initialized at {self.db_url}")
 
