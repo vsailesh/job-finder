@@ -257,7 +257,7 @@ class TursoHTTPDatabase:
 
         if hours > 0:
             cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
-            conditions.append("fetched_at >= ?")
+            conditions.append("posted_date >= ?")
             params.append(cutoff)
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
