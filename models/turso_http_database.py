@@ -5,6 +5,7 @@ Works on Streamlit Cloud without requiring compilation.
 import httpx
 import logging
 import json
+import asyncio
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -30,7 +31,7 @@ class TursoHTTPDatabase:
     async def initialize(self):
         """Initialize database - create tables via HTTP."""
         # Create tables using SQL statements
-        statements = [
+        table_statements = [
             """
             CREATE TABLE IF NOT EXISTS jobs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,7 +83,15 @@ class TursoHTTPDatabase:
                 status TEXT DEFAULT 'running'
             );
             """,
-            # Create indexes
+        ]
+
+        # Create tables first with shorter timeout
+        for statement in table_statements:
+            await self._execute(statement, timeout=60.0, retries=5)
+
+        # Create indexes with longer timeout and more lenient error handling
+        # Indexes can timeout on large tables, but we can continue if they already exist
+        index_statements = [
             "CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source);",
             "CREATE INDEX IF NOT EXISTS idx_jobs_category ON jobs(category);",
             "CREATE INDEX IF NOT EXISTS idx_jobs_job_type ON jobs(job_type);",
@@ -93,8 +102,14 @@ class TursoHTTPDatabase:
             "CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);",
         ]
 
-        for statement in statements:
-            await self._execute(statement, timeout=120.0)
+        for statement in index_statements:
+            try:
+                # Longer timeout for index creation on potentially large tables
+                await self._execute(statement, timeout=180.0, retries=5)
+            except Exception as e:
+                # If index creation fails, log but don't fail the whole init
+                # The index may already exist or be in progress
+                logger.warning(f"Index creation warning (continuing): {e}")
 
         logger.info(f"Turso HTTP database initialized at {self.db_url}")
 
@@ -156,56 +171,146 @@ class TursoHTTPDatabase:
 
         return parsed_rows
 
-    async def _execute(self, sql: str, params: tuple = (), timeout: float = 30.0) -> List[Dict[str, Any]]:
-        """Execute a SQL statement via HTTP."""
+    async def _execute(self, sql: str, params: tuple = (), timeout: float = 30.0, retries: int = 3) -> List[Dict[str, Any]]:
+        """Execute a SQL statement via HTTP with retry logic."""
         payload = self._build_payload(sql, params)
         url = f"{self.db_url}/v2/pipeline"
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                url,
-                headers=self.headers,
-                json=payload,
-                timeout=timeout
-            )
-            response.raise_for_status()
-            result = response.json()
+        # Use httpx.Timeout with separate connect/read timeouts for better control
+        timeout_config = httpx.Timeout(timeout, connect=30.0, read=timeout, write=30.0, pool=30.0)
 
-        return self._parse_response(result)
+        last_error = None
+        for attempt in range(retries):
+            try:
+                async with httpx.AsyncClient(timeout=timeout_config) as client:
+                    response = await client.post(
+                        url,
+                        headers=self.headers,
+                        json=payload
+                    )
+                    response.raise_for_status()
+                    result = response.json()
 
-    def _execute_sync(self, sql: str, params: tuple = (), timeout: float = 30.0) -> List[Dict[str, Any]]:
-        """Synchronous version of execute."""
+                return self._parse_response(result)
+
+            except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.TimeoutException) as e:
+                last_error = e
+                if attempt < retries - 1:
+                    # Exponential backoff: 2s, 4s, 8s
+                    backoff = 2 ** (attempt + 1)
+                    logger.warning(f"Timeout on attempt {attempt + 1}/{retries}, retrying in {backoff}s...")
+                    await asyncio.sleep(backoff)
+                else:
+                    logger.error(f"Failed after {retries} attempts: {e}")
+            except httpx.HTTPStatusError as e:
+                last_error = e
+                # Don't retry HTTP errors (4xx, 5xx) - they won't succeed on retry
+                logger.error(f"HTTP error {e.response.status_code}: {e}")
+                break
+            except Exception as e:
+                last_error = e
+                logger.error(f"Unexpected error: {e}")
+                break
+
+        raise last_error or RuntimeError("Unknown error in _execute")
+
+    def _execute_sync(self, sql: str, params: tuple = (), timeout: float = 30.0, retries: int = 3) -> List[Dict[str, Any]]:
+        """Synchronous version of execute with retry logic."""
         payload = self._build_payload(sql, params)
         url = f"{self.db_url}/v2/pipeline"
 
-        with httpx.Client() as client:
-            response = client.post(
-                url,
-                headers=self.headers,
-                json=payload,
-                timeout=timeout
-            )
-            response.raise_for_status()
-            result = response.json()
+        # Use httpx.Timeout with separate connect/read timeouts for better control
+        timeout_config = httpx.Timeout(timeout, connect=30.0, read=timeout, write=30.0, pool=30.0)
 
-        return self._parse_response(result)
+        last_error = None
+        for attempt in range(retries):
+            try:
+                with httpx.Client(timeout=timeout_config) as client:
+                    response = client.post(
+                        url,
+                        headers=self.headers,
+                        json=payload
+                    )
+                    response.raise_for_status()
+                    result = response.json()
 
-    def _execute_sync_with_cols(self, sql: str, params: tuple = (), timeout: float = 30.0):
+                return self._parse_response(result)
+
+            except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.TimeoutException) as e:
+                last_error = e
+                if attempt < retries - 1:
+                    # Exponential backoff: 2s, 4s, 8s
+                    backoff = 2 ** (attempt + 1)
+                    logger.warning(f"Timeout on attempt {attempt + 1}/{retries}, retrying in {backoff}s...")
+                    import time
+                    time.sleep(backoff)
+                else:
+                    logger.error(f"Failed after {retries} attempts: {e}")
+            except httpx.HTTPStatusError as e:
+                last_error = e
+                # Don't retry HTTP errors (4xx, 5xx) - they won't succeed on retry
+                logger.error(f"HTTP error {e.response.status_code}: {e}")
+                break
+            except Exception as e:
+                last_error = e
+                logger.error(f"Unexpected error: {e}")
+                break
+
+        raise last_error or RuntimeError("Unknown error in _execute_sync")
+
+    def _execute_sync_with_cols(self, sql: str, params: tuple = (), timeout: float = 30.0, retries: int = 3):
         """Execute sync and also return column names from the response."""
         payload = self._build_payload(sql, params)
         url = f"{self.db_url}/v2/pipeline"
 
-        with httpx.Client() as client:
-            response = client.post(
-                url,
-                headers=self.headers,
-                json=payload,
-                timeout=timeout
-            )
-            response.raise_for_status()
-            result = response.json()
+        # Use httpx.Timeout with separate connect/read timeouts for better control
+        timeout_config = httpx.Timeout(timeout, connect=30.0, read=timeout, write=30.0, pool=30.0)
 
-        rows = self._parse_response(result)
+        last_error = None
+        for attempt in range(retries):
+            try:
+                with httpx.Client(timeout=timeout_config) as client:
+                    response = client.post(
+                        url,
+                        headers=self.headers,
+                        json=payload
+                    )
+                    response.raise_for_status()
+                    result = response.json()
+
+                rows = self._parse_response(result)
+
+                # Extract column names from response
+                cols = []
+                results = result.get("results", [])
+                if results:
+                    first = results[0]
+                    resp = first.get("response", {})
+                    resp_result = resp.get("result", {})
+                    cols = [c.get("name", f"col{i}") for i, c in enumerate(resp_result.get("cols", []))]
+
+                return rows, cols
+
+            except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.TimeoutException) as e:
+                last_error = e
+                if attempt < retries - 1:
+                    # Exponential backoff: 2s, 4s, 8s
+                    backoff = 2 ** (attempt + 1)
+                    logger.warning(f"Timeout on attempt {attempt + 1}/{retries}, retrying in {backoff}s...")
+                    import time
+                    time.sleep(backoff)
+                else:
+                    logger.error(f"Failed after {retries} attempts: {e}")
+            except httpx.HTTPStatusError as e:
+                last_error = e
+                logger.error(f"HTTP error {e.response.status_code}: {e}")
+                break
+            except Exception as e:
+                last_error = e
+                logger.error(f"Unexpected error: {e}")
+                break
+
+        raise last_error or RuntimeError("Unknown error in _execute_sync_with_cols")
 
         # Extract column names from response
         cols = []
@@ -485,10 +590,18 @@ class TursoHTTPDatabase:
 
     def _init_tables_sync(self):
         """Create tables using synchronous HTTP calls."""
-        statements = [
+        table_statements = [
             "CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, unique_hash TEXT UNIQUE NOT NULL, title TEXT NOT NULL, company TEXT NOT NULL, location TEXT NOT NULL, url TEXT NOT NULL, source TEXT NOT NULL, category TEXT NOT NULL, posted_date TEXT NOT NULL, description TEXT DEFAULT '', salary_min REAL, salary_max REAL, job_type TEXT DEFAULT 'corporate', employment_type TEXT DEFAULT '', seniority TEXT DEFAULT '', remote INTEGER DEFAULT 0, search_keyword TEXT DEFAULT '', fetched_at TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now')))",
             "CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, job_hash TEXT NOT NULL, profile_name TEXT NOT NULL, status TEXT DEFAULT 'queued', applied_at TEXT, cover_letter TEXT DEFAULT '', notes TEXT DEFAULT '', error_message TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY (job_id) REFERENCES jobs(id))",
             "CREATE TABLE IF NOT EXISTS search_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, started_at TEXT NOT NULL, completed_at TEXT, total_found INTEGER DEFAULT 0, new_jobs INTEGER DEFAULT 0, duplicates_skipped INTEGER DEFAULT 0, errors INTEGER DEFAULT 0, sources_searched TEXT DEFAULT '', status TEXT DEFAULT 'running')",
+        ]
+
+        # Create tables first
+        for stmt in table_statements:
+            self._execute_sync(stmt, retries=5)
+
+        # Create indexes with lenient error handling
+        index_statements = [
             "CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs(source)",
             "CREATE INDEX IF NOT EXISTS idx_jobs_category ON jobs(category)",
             "CREATE INDEX IF NOT EXISTS idx_jobs_job_type ON jobs(job_type)",
@@ -498,8 +611,13 @@ class TursoHTTPDatabase:
             "CREATE INDEX IF NOT EXISTS idx_applications_profile ON applications(profile_name)",
             "CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)",
         ]
-        for stmt in statements:
-            self._execute_sync(stmt)
+
+        for stmt in index_statements:
+            try:
+                self._execute_sync(stmt, retries=5)
+            except Exception as e:
+                logger.warning(f"Index creation warning (continuing): {e}")
+
         logger.info(f"Turso HTTP database initialized (sync) at {self.db_url}")
 
     def vacuum_sync(self):
